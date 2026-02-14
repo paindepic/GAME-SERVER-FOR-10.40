@@ -5,9 +5,34 @@
 #include "BotNames.h"
 
 namespace Bots {
+    // City coordinates for Fortnite Season 10.40 map (approximate centers)
+    struct FCityLocation {
+        FString Name;
+        FVector Center;
+        float Radius;
+    };
+    
+    static TArray<FCityLocation> GetMajorCityLocations() {
+        TArray<FCityLocation> Cities;
+        
+        // Major POIs on Athena map (Season 10.40)
+        Cities.Add({FString(L"Tilted Towers"), FVector(-143000, -212000, 0), 5000.f});
+        Cities.Add({FString(L"Pleasant Park"), FVector(-50000, -225000, 0), 4000.f});
+        Cities.Add({FString(L"Retail Row"), FVector(205000, -213000, 0), 4000.f});
+        Cities.Add({FString(L"Salty Springs"), FVector(27000, -60000, 0), 3000.f});
+        Cities.Add({FString(L"Paradise Palms"), FVector(219000, 70000, 0), 4500.f});
+        Cities.Add({FString(L"Fatal Fields"), FVector(-19000, 119000, 0), 3500.f});
+        Cities.Add({FString(L"Lazy Lagoon"), FVector(166000, -290000, 0), 3500.f});
+        Cities.Add({FString(L"Mega Mall"), FVector(15000, -172000, 0), 4000.f});
+        
+        return Cities;
+    }
+    
     // Helper function to filter large building foundations for roof spawning
-    TArray<AActor*> GetLargeBuildingFoundations(float MinSize = 10000.0f) {
+    // Now supports city-specific targeting for better distribution
+    TArray<AActor*> GetLargeBuildingFoundations(float MinSize = 10000.0f, bool bCitiesOnly = false) {
         TArray<AActor*> LargeFoundations;
+        TArray<FCityLocation> Cities = GetMajorCityLocations();
         
         for (AActor* Foundation : BuildingFoundations) {
             if (!Foundation) continue;
@@ -15,17 +40,40 @@ namespace Bots {
             // Get bounding box to determine building size
             FVector Origin, Extent;
             Foundation->GetActorBounds(false, &Origin, &Extent);
+            FVector BuildingLoc = Foundation->K2_GetActorLocation();
             
             // Calculate approximate footprint (X * Y dimensions)
             float Footprint = Extent.X * Extent.Y * 4.0f; // *4 because Extent is half-size
             
-            if (Footprint >= MinSize) {
+            if (Footprint < MinSize) continue;
+            
+            // If city-only mode, check if building is in a major city
+            if (bCitiesOnly) {
+                bool bInCity = false;
+                FString CityName = FString(L"Unknown");
+                
+                for (const FCityLocation& City : Cities) {
+                    float Distance = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(BuildingLoc, City.Center);
+                    if (Distance < City.Radius) {
+                        bInCity = true;
+                        CityName = City.Name;
+                        Log(std::format("[ROOF SPAWN] Found building in {} (footprint: {:.0f})", 
+                            std::string(reinterpret_cast<const char*>(CityName.c_str()), CityName.Num()), Footprint).c_str());
+                        break;
+                    }
+                }
+                
+                if (bInCity) {
+                    LargeFoundations.Add(Foundation);
+                }
+            } else {
+                // Add all large buildings regardless of location
                 LargeFoundations.Add(Foundation);
             }
         }
         
-        Log(std::format("[ROOF SPAWN] Found {} large building foundations out of {}", 
-            LargeFoundations.Num(), BuildingFoundations.Num()).c_str());
+        Log(std::format("[ROOF SPAWN] Found {} large buildings (cities only: {})", 
+            LargeFoundations.Num(), bCitiesOnly ? "YES" : "NO").c_str());
         
         return LargeFoundations;
     }
@@ -95,22 +143,32 @@ namespace Bots {
             BotSpawn = OverrideSpawnLoc;
         }
 
-        // Support roof spawning - use large building foundations for major cities
+        // ENHANCED: Support roof spawning with city-specific targeting
         FVector SpawnLocation = BotSpawn->K2_GetActorLocation();
         bool bActuallySpawnedOnRoof = false;
         
         if (bSpawnOnRoof && BuildingFoundations.Num() > 0) {
-            // Get large buildings only (cities like Tilted, Pleasant, Retail)
-            static TArray<AActor*> LargeBuildingCache;
+            // Get large buildings in major cities (Tilted, Pleasant, Retail, etc.)
+            static TArray<AActor*> CityBuildingCache;
+            static TArray<AActor*> AllLargeBuildingCache;
             static bool bCacheInitialized = false;
             
             if (!bCacheInitialized) {
-                LargeBuildingCache = GetLargeBuildingFoundations(8000.0f); // Minimum 8k footprint for major buildings
+                CityBuildingCache = GetLargeBuildingFoundations(8000.0f, true); // Cities only
+                AllLargeBuildingCache = GetLargeBuildingFoundations(8000.0f, false); // All large buildings
                 bCacheInitialized = true;
+                
+                Log(std::format("[ROOF SPAWN] Cached {} city buildings, {} total large buildings",
+                    CityBuildingCache.Num(), AllLargeBuildingCache.Num()).c_str());
             }
             
-            if (LargeBuildingCache.Num() > 0) {
-                AActor* RoofFoundation = LargeBuildingCache[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, LargeBuildingCache.Num() - 1)];
+            // Prefer city buildings (70% chance) for better distribution
+            bool bUseCity = UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.7f);
+            TArray<AActor*>& BuildingCache = (bUseCity && CityBuildingCache.Num() > 0) ? 
+                CityBuildingCache : AllLargeBuildingCache;
+            
+            if (BuildingCache.Num() > 0) {
+                AActor* RoofFoundation = BuildingCache[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, BuildingCache.Num() - 1)];
                 if (RoofFoundation) {
                     FVector RoofLoc = RoofFoundation->K2_GetActorLocation();
                     
@@ -118,18 +176,21 @@ namespace Bots {
                     FVector Origin, Extent;
                     RoofFoundation->GetActorBounds(false, &Origin, &Extent);
                     float BuildingHeight = Extent.Z * 2.0f;
+                    float BuildingFootprint = Extent.X * Extent.Y * 4.0f;
                     
-                    RoofLoc.Z += (BuildingHeight > 300.0f ? BuildingHeight : 800.0f); // Use actual height or default
-                    RoofLoc.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-200.f, 200.f);
-                    RoofLoc.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-200.f, 200.f);
+                    // Spawn on top of building with slight randomization
+                    RoofLoc.Z += (BuildingHeight > 300.0f ? BuildingHeight * 0.9f : 800.0f);
+                    RoofLoc.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-150.f, 150.f);
+                    RoofLoc.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-150.f, 150.f);
                     SpawnLocation = RoofLoc;
                     bActuallySpawnedOnRoof = true;
                     
-                    Log(std::format("[ROOF SPAWN] Bot spawning on roof at X={:.1f}, Y={:.1f}, Z={:.1f} (Building Height: {:.1f})",
-                        RoofLoc.X, RoofLoc.Y, RoofLoc.Z, BuildingHeight).c_str());
+                    Log(std::format("[ROOF SPAWN] Bot spawning on {} roof at X={:.0f}, Y={:.0f}, Z={:.0f} (Height: {:.0f}, Footprint: {:.0f})",
+                        bUseCity ? "CITY" : "large building",
+                        RoofLoc.X, RoofLoc.Y, RoofLoc.Z, BuildingHeight, BuildingFootprint).c_str());
                 }
             } else {
-                Log("[ROOF SPAWN] No large buildings found, using normal spawn!");
+                Log("[ROOF SPAWN] No suitable buildings found, using normal spawn!");
             }
         }
 
