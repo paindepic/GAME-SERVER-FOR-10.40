@@ -3,6 +3,9 @@
 
 #include "AIController.h"
 
+// Forward declaration - callback pour éviter le cycle d'inclusion avec GameMode.h
+inline void (*BotSpawnProgressCallback)() = nullptr;
+
 namespace ServerBotManager {
     AFortPlayerPawnAthena* (*SpawnBotOG)(UFortServerBotManagerAthena* This, FVector SpawnLoc, FRotator SpawnRot, UFortAthenaAIBotCustomizationData* BotData);
     AFortPlayerPawnAthena* SpawnBot(UFortServerBotManagerAthena* This, FVector SpawnLoc, FRotator SpawnRot, UFortAthenaAIBotCustomizationData* BotData)
@@ -97,7 +100,7 @@ namespace ServerBotManager {
         PlayerBots::PlayerBot* Bot = new PlayerBots::PlayerBot(Pawn, PC, PlayerState);
 
         // Tick bot spawn manager to continue spawning bots progressively
-        GameMode::FBotSpawnManager::TickSpawn();
+        if (BotSpawnProgressCallback) BotSpawnProgressCallback();
 
         if (PC->Inventory) {
             for (auto item : BotData->StartupInventory->Items)
