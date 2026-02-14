@@ -1,2 +1,0 @@
-# GAME-SERVER-FOR-10.40
-idk
