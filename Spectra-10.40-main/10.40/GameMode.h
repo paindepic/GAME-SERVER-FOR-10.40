@@ -1,6 +1,5 @@
 #pragma once
 #include "pch.h"
-#include "ServerBotManager.h"
 
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
@@ -26,7 +25,11 @@ namespace GameMode
             LastSpawnTime = 0.f;
             bSpawnInProgress = true;
             bInitialized = true;
-            Log(std::format("[BOT SPAWNER] Initialized spawning {} bots", NumBots).c_str());
+            {
+                std::stringstream ss;
+                ss << "[BOT SPAWNER] Initialized spawning " << NumBots << " bots";
+                Log(ss.str());
+            }
         }
 
         static void TickSpawn()
@@ -36,7 +39,11 @@ namespace GameMode
                 if (bSpawnInProgress && BotsSpawned >= BotsToSpawn)
                 {
                     bSpawnInProgress = false;
-                    Log(std::format("[BOT SPAWNER] All {} bots spawned successfully!", BotsSpawned).c_str());
+                    {
+                        std::stringstream ss;
+                        ss << "[BOT SPAWNER] All " << BotsSpawned << " bots spawned successfully!";
+                        Log(ss.str());
+                    }
                 }
                 return;
             }
@@ -52,13 +59,17 @@ namespace GameMode
 
                 if (BotsSpawned % 10 == 0)
                 {
-                    Log(std::format("[BOT SPAWNER] Spawned {}/{} bots", BotsSpawned, BotsToSpawn).c_str());
+                    std::stringstream ss;
+                    ss << "[BOT SPAWNER] Spawned " << BotsSpawned << "/" << BotsToSpawn << " bots";
+                    Log(ss.str());
                 }
 
                 if (BotsSpawned >= BotsToSpawn)
                 {
                     bSpawnInProgress = false;
-                    Log(std::format("[BOT SPAWNER] All {} bots spawned successfully!", BotsSpawned).c_str());
+                    std::stringstream ss2;
+                    ss2 << "[BOT SPAWNER] All " << BotsSpawned << " bots spawned successfully!";
+                    Log(ss2.str());
                 }
             }
         }
@@ -88,7 +99,11 @@ namespace GameMode
         if (!bSetupPlaylist)
         {
             bSetupPlaylist = true;
-            Log(std::format("bSetupPlaylist = {}", bSetupPlaylist).c_str());
+            {
+                std::stringstream ss;
+                ss << "bSetupPlaylist = " << (bSetupPlaylist ? "true" : "false");
+                Log(ss.str());
+            }
 
             if (Globals::bEventEnabled) {
                 Playlist = StaticLoadObject<UFortPlaylistAthena>("/Game/Athena/Playlists/Music/Playlist_Music_High.Playlist_Music_High");
@@ -102,7 +117,12 @@ namespace GameMode
 
             int32 PlaylistId = Playlist->PlaylistId;
 
-            Log(std::format("Playlist = {}", Playlist->GetName()).c_str());
+            {
+                std::string playlistName = Playlist->GetName().ToString();
+                std::stringstream ss;
+                ss << "Playlist = " << playlistName;
+                Log(ss.str());
+            }
 
             GameState->CurrentPlaylistInfo.BasePlaylist = Playlist;
             GameState->CurrentPlaylistInfo.OverridePlaylist = Playlist;
@@ -135,7 +155,11 @@ namespace GameMode
         if (!bInitialize)
         {
             bInitialize = true;
-            Log(std::format("bInitialize = {}", bInitialize).c_str());
+            {
+                std::stringstream ss;
+                ss << "bInitialize = " << (bInitialize ? "true" : "false");
+                Log(ss.str());
+            }
 
             GameState->OnRep_CurrentPlaylistId();
             GameState->OnRep_CurrentPlaylistInfo();
@@ -217,7 +241,11 @@ namespace GameMode
         if (!bIsNetReady)
         {
             bIsNetReady = true;
-            Log(std::format("bIsNetReady = {}", bIsNetReady).c_str());
+            {
+                std::stringstream ss;
+                ss << "bIsNetReady = " << (bIsNetReady ? "true" : "false");
+                Log(ss.str());
+            }
 
             FName NetDriverDefinition = UKismetStringLibrary::Conv_StringToName(L"GameNetDriver");
             UNetDriver* Driver = CreateNetDriver(UEngine::GetEngine(), UWorld::GetWorld(), NetDriverDefinition);
@@ -232,7 +260,12 @@ namespace GameMode
             NewURL.Port = 7777;
 
             if (!InitListen(Driver, UWorld::GetWorld(), NewURL, true, Error))
-                Log(std::format("UIpNetDriver::InitListen Error: {}", Error.ToString()).c_str());
+            {
+                std::string errorStr = Error.ToString();
+                std::stringstream ss;
+                ss << "UIpNetDriver::InitListen Error: " << errorStr;
+                Log(ss.str());
+            }
 
             UWorld::GetWorld()->NetDriver = Driver;
             SetWorld(Driver, UWorld::GetWorld());
@@ -240,8 +273,16 @@ namespace GameMode
             for (int i = 0; i < UWorld::GetWorld()->LevelCollections.Num(); i++)
                 UWorld::GetWorld()->LevelCollections[i].NetDriver = Driver;
 
-            Log(std::format("IpNetDriver listening on port {}!", NewURL.Port).c_str());
-            SetConsoleTitleW(std::format(L"Spectra 10.40 | IpNetDriver listening on port {}!", NewURL.Port).c_str());
+            {
+                std::stringstream ss;
+                ss << "IpNetDriver listening on port " << NewURL.Port << "!";
+                Log(ss.str());
+            }
+            {
+                std::wstringstream wss;
+                wss << L"Spectra 10.40 | IpNetDriver listening on port " << NewURL.Port << L"!";
+                SetConsoleTitleW(wss.str().c_str());
+            }
         }
 
         if (ReadyToStartMatchOG(GameMode)) {
