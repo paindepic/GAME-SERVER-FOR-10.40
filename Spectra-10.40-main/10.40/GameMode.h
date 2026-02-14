@@ -271,15 +271,35 @@ namespace GameMode
         Log("OnAircraftExitedDropZone!");
 
         if (Globals::bBotsEnabled) {
-            for (auto PlayerBot : PlayerBots::PlayerBotArray) {
-                if (!PlayerBot->bHasJumpedFromBus) {
-                    AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+            AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+            if (!GameState) {
+                Log("[CRASH FIX] GameState is null in OnAircraftExitedDropZone!");
+                return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
+            }
 
-                    PlayerBot->Pawn->K2_TeleportTo(GameState->GetAircraft(0)->K2_GetActorLocation(), {});
+            AActor* Aircraft = GameState->GetAircraft(0);
+            if (!Aircraft) {
+                Log("[CRASH FIX] Aircraft is null in OnAircraftExitedDropZone!");
+                return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
+            }
+
+            FVector AircraftLocation = Aircraft->K2_GetActorLocation();
+
+            for (auto PlayerBot : PlayerBots::PlayerBotArray) {
+                if (!PlayerBot) {
+                    Log("[CRASH FIX] PlayerBot is null in OnAircraftExitedDropZone!");
+                    continue;
+                }
+                if (!PlayerBot->Pawn) {
+                    Log("[CRASH FIX] PlayerBot->Pawn is null in OnAircraftExitedDropZone!");
+                    continue;
+                }
+                if (!PlayerBot->bHasJumpedFromBus) {
+                    PlayerBot->Pawn->K2_TeleportTo(AircraftLocation, {});
                     PlayerBot->Pawn->BeginSkydiving(true);
                     PlayerBot->bHasJumpedFromBus = true;
-
                     PlayerBot->BotState = PlayerBots::EBotState::Skydiving;
+                    Log("[BOT DROP] Bot jumped from bus forcefully!");
                 }
             }
         }

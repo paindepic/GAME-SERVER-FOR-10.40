@@ -1679,67 +1679,16 @@ namespace PlayerBots {
     class BotsBTService_AIDropZone {
     public:
         void ChooseDropZone(PlayerBot* bot) {
-            if (!bot) return;
-            if (BuildingFoundations.Num() == 0) {
-                Log("[DROP ZONE] No building foundations available!");
-                return;
-            }
-            
-            // If bot spawned on a roof, target large buildings (cities)
-            if (bot->bHasRoofSpawned) {
-                // Filter for large buildings only
-                TArray<AActor*> LargeBuildings;
-                for (AActor* Foundation : BuildingFoundations) {
-                    if (!Foundation) continue;
-                    FVector Origin, Extent;
-                    Foundation->GetActorBounds(false, &Origin, &Extent);
-                    float Footprint = Extent.X * Extent.Y * 4.0f;
-                    if (Footprint >= 8000.0f) {
-                        LargeBuildings.Add(Foundation);
-                    }
-                }
-                
-                if (LargeBuildings.Num() > 0) {
-                    AActor* DropZone = LargeBuildings[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, LargeBuildings.Num() - 1)];
-                    if (DropZone) {
-                        FVector Origin, Extent;
-                        DropZone->GetActorBounds(false, &Origin, &Extent);
-                        float BuildingHeight = Extent.Z * 2.0f;
-                        
-                        bot->TargetDropZone = DropZone->K2_GetActorLocation();
-                        bot->TargetDropZone.Z += (BuildingHeight > 300.0f ? BuildingHeight * 0.8f : 600.0f); // Target roof height
-                        bot->TargetDropZone.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
-                        bot->TargetDropZone.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
-                        
-                        Log(std::format("[DROP ZONE] Roof bot targeting large building roof at Z={:.1f}", bot->TargetDropZone.Z).c_str());
-                        return;
-                    }
-                }
-            }
-            
-            // Normal drop zone selection
+            if (BuildingFoundations.Num() == 0) return;
             AActor* DropZone = BuildingFoundations[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, BuildingFoundations.Num() - 1)];
-            if (DropZone) {
-                bot->TargetDropZone = DropZone->K2_GetActorLocation();
-                bot->TargetDropZone.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-800.f, 800.f);
-                bot->TargetDropZone.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-800.f, 800.f);
-            }
+            if (DropZone) bot->TargetDropZone = DropZone->K2_GetActorLocation();
+            bot->TargetDropZone.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-800.f, 800.f);
+            bot->TargetDropZone.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-800.f, 800.f);
         }
 
     public:
         void Tick(PlayerBot* bot) {
-            // Null checks for crash prevention
-            if (!bot || !bot->Pawn || !bot->PC || !bot->PlayerState) {
-                Log("[CRASH FIX] Null bot components in AIDropZone::Tick!");
-                return;
-            }
-            
             auto GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
-            if (!GameState) {
-                Log("[CRASH FIX] GameState is null in AIDropZone::Tick!");
-                return;
-            }
-            
             auto Math = (UKismetMathLibrary*)UKismetMathLibrary::StaticClass()->DefaultObject;
             auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
             auto Statics = (UGameplayStatics*)UGameplayStatics::StaticClass()->DefaultObject;
@@ -1772,10 +1721,7 @@ namespace PlayerBots {
                     bot->PlayerState->OnRep_ThankedBusDriver();
                 }
                 AActor* Bus = GameState->GetAircraft(0);
-                if (!Bus) {
-                    Log("[CRASH FIX] Aircraft is null in Bus state!");
-                    return;
-                }
+                if (!Bus) return;
                 FVector BusLocation = Bus->K2_GetActorLocation();
                 FVector DropTarget = bot->TargetDropZone;
                 DropTarget.Z = BusLocation.Z;
@@ -1919,12 +1865,6 @@ namespace PlayerBots {
     class BotsBTService_Combat {
     public:
         void Tick(PlayerBot* bot) {
-            // Null checks for crash prevention
-            if (!bot || !bot->Pawn || !bot->PC) {
-                Log("[CRASH FIX] Null bot components in Combat::Tick!");
-                return;
-            }
-            
             bot->PC->K2_ClearFocus();
             auto Math = UKismetMathLibrary::GetDefaultObj();
             float CurrentTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
@@ -1936,7 +1876,7 @@ namespace PlayerBots {
             if (bot->IsPickaxeEquiped()) bot->SimpleSwitchToWeapon();
             
             FVector BotLoc = bot->Pawn->K2_GetActorLocation();
-            if (bot->NearestPlayerPawn && !bot->NearestPlayerPawn->IsDead()) {
+            if (bot->NearestPlayerPawn) {
                 FVector Nearest = bot->NearestPlayerPawn->K2_GetActorLocation();
                 bot->LastKnownEnemyPosition = Nearest;
                 bot->LastCombatTime = CurrentTime;
@@ -2114,32 +2054,13 @@ namespace PlayerBots {
     void TickBots() {
         auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
         auto GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
-        
-        // Null checks for critical game objects
-        if (!GameMode) {
-            Log("[CRASH FIX] GameMode is null in TickBots!");
-            return;
-        }
-        if (!GameState) {
-            Log("[CRASH FIX] GameState is null in TickBots!");
-            return;
-        }
 
         for (PlayerBot* Bot : PlayerBotArray) {
-            if (!Bot || !Bot->PC || !Bot->Pawn || !Bot->PlayerState) {
-                if (Bot) {
-                    Log("[CRASH FIX] Bot has null components - skipping tick!");
-                }
-                continue;
-            }
+            if (!Bot || !Bot->PC || !Bot->Pawn || !Bot->PlayerState) continue;
 
             if (Bot->PlayerState->IsPlayerDead() || Bot->Pawn->IsDead()) {
                 for (int i = 0; i < PlayerBotArray.size(); i++) {
                     if (PlayerBotArray[i]->Pawn == Bot->Pawn) {
-                        if (GameMode->AliveBots.Num() == 0) {
-                            Log("[CRASH FIX] AliveBots array is empty during death handling!");
-                            break;
-                        }
                         for (int j = 0; j < GameMode->AliveBots.Num(); j++) {
                             AFortAthenaAIBotController* bot = GameMode->AliveBots[j];
                             if (Bot->PC == bot) {
