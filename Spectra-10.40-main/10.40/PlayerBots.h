@@ -1019,7 +1019,7 @@ namespace PlayerBots {
                 AFortPlayerPawnAthena* OtherPawn = (AFortPlayerPawnAthena*)Player->Pawn;
                 if (!OtherPawn->CurrentWeapon) continue;
                 float Dist = OtherPawn->GetDistanceTo(bot->Pawn);
-                if (Dist < DetectionRadius && OtherPawn->CurrentWeapon->IsFiring()) {
+                if (Dist < DetectionRadius ) {
                     FSoundMemory Sound;
                     Sound.SoundType = EBotSoundType::Gunshot;
                     Sound.Location = OtherPawn->K2_GetActorLocation();
@@ -1042,7 +1042,7 @@ namespace PlayerBots {
                 AFortPlayerPawnAthena* OtherPawn = (AFortPlayerPawnAthena*)OtherBot->Pawn;
                 if (!OtherPawn->CurrentWeapon) continue;
                 float Dist = OtherPawn->GetDistanceTo(bot->Pawn);
-                if (Dist < DetectionRadius && OtherPawn->CurrentWeapon->IsFiring()) {
+                if (Dist < DetectionRadius ) {
                     FSoundMemory Sound;
                     Sound.SoundType = EBotSoundType::Gunshot;
                     Sound.Location = OtherPawn->K2_GetActorLocation();
@@ -1597,7 +1597,7 @@ namespace PlayerBots {
             else if (bot->WarmupChoice == EBotWarmupChoice::SocialGroup) {
                 if (bot->tick_counter % 180 == 0) {
                     // Find a group of other bots/players
-                    FVector GroupCenter = FVector::ZeroVector;
+                    FVector GroupCenter = FVector(0, 0, 0);
                     int NearbyCount = 0;
                     auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
                     for (auto* OtherBot : GameMode->AliveBots) {
@@ -1637,7 +1637,7 @@ namespace PlayerBots {
                     float RandomAngle = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(0.f, 360.f);
                     float Distance = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(500.f, 2000.f);
                     float Rad = RandomAngle * 3.14159f / 180.f;
-                    FVector Offset(cos(Rad) * Distance, sin(Rad) * Distance, 0);
+                    FVector Offset((float)cos(Rad) * Distance, (float)sin(Rad) * Distance, 0);
                     FVector TargetLoc = bot->LastUpdatedBotLocation + Offset;
                     bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
                     // Occasionally look around
