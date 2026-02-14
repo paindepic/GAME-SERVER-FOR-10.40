@@ -1,14 +1,13 @@
 #pragma once
 #include "pch.h"
 
+#include "ServerBotManager.h"
 #include "PlayerBots.h"
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
 #include "Bots.h"
 
-// Callback implementation pour éviter le cycle d'inclusion
-// Défini après les includes car utilise GameMode::FBotSpawnManager
-void BotSpawnProgressCallbackImpl();
+BotSpawnCallback BotSpawnProgressCallback = nullptr;
 
 namespace GameMode
 {
@@ -31,7 +30,7 @@ namespace GameMode
             bSpawnInProgress = true;
             bInitialized = true;
             // Initialiser le callback pour ServerBotManager
-            BotSpawnProgressCallback = BotSpawnProgressCallbackImpl;
+            BotSpawnProgressCallback = TickSpawn;
             Log(std::string("[BOT SPAWNER] Initialized spawning ") + std::to_string(NumBots) + " bots");
         }
 
@@ -72,11 +71,6 @@ namespace GameMode
             }
         }
     };
-
-    // Implementation du callback après la définition de FBotSpawnManager
-    inline void BotSpawnProgressCallbackImpl() {
-        FBotSpawnManager::TickSpawn();
-    }
 
     int32 FBotSpawnManager::BotsToSpawn = 0;
     int32 FBotSpawnManager::BotsSpawned = 0;

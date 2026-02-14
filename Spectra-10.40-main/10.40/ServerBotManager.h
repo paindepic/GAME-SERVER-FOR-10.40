@@ -3,8 +3,13 @@
 
 #include "AIController.h"
 
-// Forward declaration - callback pour éviter le cycle d'inclusion avec GameMode.h
-inline void (*BotSpawnProgressCallback)() = nullptr;
+// Forward declaration
+namespace GameMode {
+    struct FBotSpawnManager;
+}
+
+typedef void (*BotSpawnCallback)();
+extern BotSpawnCallback BotSpawnProgressCallback;
 
 namespace ServerBotManager {
     AFortPlayerPawnAthena* (*SpawnBotOG)(UFortServerBotManagerAthena* This, FVector SpawnLoc, FRotator SpawnRot, UFortAthenaAIBotCustomizationData* BotData);
