@@ -351,11 +351,6 @@ namespace PlayerBots {
             AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
             AFortPlayerPawnAthena* NearestPlayer = nullptr;
 
-        AFortPlayerPawnAthena* GetNearestPawn() {
-            auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
-            AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
-            AFortPlayerPawnAthena* NearestPlayer = nullptr;
-
             float NearestDistance = FLT_MAX;
             for (size_t i = 0; i < GameMode->AlivePlayers.Num(); i++) {
                 if ((GameMode->AlivePlayers[i]->Pawn && GameMode->AlivePlayers[i]->Pawn->GetDistanceTo(Pawn) < NearestDistance)) {
@@ -398,11 +393,6 @@ namespace PlayerBots {
         }
 
 
-        AFortPlayerPawnAthena* GetRandomPawn() {
-            auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
-            if (GameMode->AlivePlayers.Num() == 0 || GameMode->AliveBots.Num() == 0) return nullptr;
-            AFortPlayerPawnAthena* RandomPlayer = GameMode->AlivePlayers[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, GameMode->AlivePlayers.Num() - 1)]->Pawn;
-            AFortPlayerPawnAthena* RandomBot = GameMode->AliveBots[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, GameMode->AliveBots.Num() - 1)]->Pawn;
 
         AFortPlayerPawnAthena* GetRandomPawn() {
             auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
