@@ -133,17 +133,6 @@ namespace Bots {
             }
         }
 
-        int PrecomputedTeamIndex = Globals::NextBotTeamIndex;
-        ++Globals::CurrentBotsOnTeam;
-
-        if (Globals::CurrentBotsOnTeam == Globals::MaxPlayersPerTeam)
-        {
-            Globals::NextBotTeamIndex++;
-            Globals::CurrentBotsOnTeam = 0;
-        }
-
-        int PrecomputedSquadId = PrecomputedTeamIndex - 3;
-
         AFortPlayerPawnAthena* Pawn = GameMode->ServerBotManager->SpawnBot(SpawnLocation, BotSpawn->K2_GetActorRotation(), BotCustomizationData);
         if (!Pawn) {
             Log("[CRASH FIX] Failed to spawn bot pawn!");
@@ -187,21 +176,34 @@ namespace Bots {
             }
         }
 
-        PlayerState->TeamIndex = PrecomputedTeamIndex;
-        PlayerState->OnRep_TeamIndex(0);
+        if (true)
+        {
+            int Ret = Globals::NextBotTeamIndex;
 
-        PlayerState->SquadId = PrecomputedSquadId;
-        PlayerState->OnRep_SquadId();
+            ++Globals::CurrentBotsOnTeam;
 
-        PlayerState->OnRep_PlayerTeam();
-        PlayerState->OnRep_PlayerTeamPrivate();
+            if (Globals::CurrentBotsOnTeam == Globals::MaxPlayersPerTeam)
+            {
+                Globals::NextBotTeamIndex++;
+                Globals::CurrentBotsOnTeam = 0;
+            }
 
-        FGameMemberInfo NewMemberInfo{ -1,-1,-1 };
-        NewMemberInfo.MemberUniqueId = PlayerState->GetUniqueID();
-        NewMemberInfo.SquadId = PlayerState->SquadId;
-        NewMemberInfo.TeamIndex = PlayerState->TeamIndex;
+            PlayerState->TeamIndex = Ret;
+            PlayerState->OnRep_TeamIndex(0);
 
-        GameState->GameMemberInfoArray.Members.Add(NewMemberInfo);
-        GameState->GameMemberInfoArray.MarkItemDirty(NewMemberInfo);
+            PlayerState->SquadId = PlayerState->TeamIndex - 3;
+            PlayerState->OnRep_SquadId();
+
+            PlayerState->OnRep_PlayerTeam();
+            PlayerState->OnRep_PlayerTeamPrivate();
+
+            FGameMemberInfo NewMemberInfo{ -1,-1,-1 };
+            NewMemberInfo.MemberUniqueId = PlayerState->GetUniqueID();
+            NewMemberInfo.SquadId = PlayerState->SquadId;
+            NewMemberInfo.TeamIndex = PlayerState->TeamIndex;
+
+            GameState->GameMemberInfoArray.Members.Add(NewMemberInfo);
+            GameState->GameMemberInfoArray.MarkItemDirty(NewMemberInfo);
+        }
     }
 }

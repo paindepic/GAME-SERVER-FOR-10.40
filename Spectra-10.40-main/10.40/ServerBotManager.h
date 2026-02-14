@@ -97,10 +97,6 @@ namespace ServerBotManager {
 
         PlayerBots::PlayerBot* Bot = new PlayerBots::PlayerBot(Pawn, PC, PlayerState);
 
-        AddToAlivePlayers(GameMode, (AFortPlayerControllerAthena*)PC);
-        GameMode->AliveBots.Add(PC);
-        Log(std::format("[BOT SPAWN] Bot added to AliveBots. Total bots: {}", GameMode->AliveBots.Num()).c_str());
-
         // Tick bot spawn manager to continue spawning bots progressively
         GameMode::FBotSpawnManager::TickSpawn();
 

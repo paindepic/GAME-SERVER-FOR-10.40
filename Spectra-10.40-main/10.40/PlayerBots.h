@@ -127,10 +127,7 @@ namespace PlayerBots {
         FVector Location = FVector();
         float DetectionTime = 0.f;
         float Confidence = 0.f;
-
-        AFortPlayerPawnAthena* SourcePawn = nullptr;
-
-
+        APawn* SourcePawn = nullptr;
         
         bool IsValid(float CurrentTime, float MaxAge = 30.f) const {
             return SoundType != EBotSoundType::None && 
@@ -166,10 +163,7 @@ namespace PlayerBots {
         ABuildingContainer* NearestChest = nullptr;
         FVector ClosestLootableLoc = FVector();
         ELootableType ClosestLootableType = ELootableType::None;
-
-        AFortPlayerPawnAthena* CurrentlyFocusedPawn = nullptr;
-
-
+        APawn* CurrentlyFocusedPawn = nullptr;
         bool bHasCompletedCurrentAction = false;
         FVector TargetDropZone = FVector();
         float ClosestDistToDropZone = FLT_MAX;
@@ -345,12 +339,10 @@ namespace PlayerBots {
             return (AFortPickup*)NearestPickup;
         }
 
-
-        AFortPlayerPawnAthena* GetNearestPawn() {
+        APawn* GetNearestPawn() {
             auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
             AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
-            AFortPlayerPawnAthena* NearestPlayer = nullptr;
-
+            APawn* NearestPlayer = nullptr;
             float NearestDistance = FLT_MAX;
             for (size_t i = 0; i < GameMode->AlivePlayers.Num(); i++) {
                 if ((GameMode->AlivePlayers[i]->Pawn && GameMode->AlivePlayers[i]->Pawn->GetDistanceTo(Pawn) < NearestDistance)) {
@@ -392,14 +384,11 @@ namespace PlayerBots {
             }
         }
 
-
-
-        AFortPlayerPawnAthena* GetRandomPawn() {
+        APawn* GetRandomPawn() {
             auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
             if (GameMode->AlivePlayers.Num() == 0 || GameMode->AliveBots.Num() == 0) return nullptr;
-            AFortPlayerPawnAthena* RandomPlayer = GameMode->AlivePlayers[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, GameMode->AlivePlayers.Num() - 1)]->Pawn;
-            AFortPlayerPawnAthena* RandomBot = GameMode->AliveBots[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, GameMode->AliveBots.Num() - 1)]->Pawn;
-
+            APawn* RandomPlayer = GameMode->AlivePlayers[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, GameMode->AlivePlayers.Num() - 1)]->Pawn;
+            APawn* RandomBot = GameMode->AliveBots[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, GameMode->AliveBots.Num() - 1)]->Pawn;
             if (UKismetMathLibrary::GetDefaultObj()->RandomBool()) return RandomPlayer;
             else {
                 if (RandomBot == Pawn) return nullptr;
@@ -1491,11 +1480,7 @@ namespace PlayerBots {
             }
             else if (bot->WarmupChoice == EBotWarmupChoice::LookAtRandomPlayers) {
                 if (bot->tick_counter % 90 == 0) {
-
-                    AFortPlayerPawnAthena* RandomPawn = bot->GetRandomPawn();
-
-                    AFortPlayerPawnAthena* RandomPawn = bot->GetRandomPawn();
-
+                    APawn* RandomPawn = bot->GetRandomPawn();
                     if (RandomPawn) bot->LookAt(RandomPawn);
                 }
             }
@@ -1657,11 +1642,7 @@ namespace PlayerBots {
                     bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
                     // Occasionally look around
                     if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.4f)) {
-
-                        AFortPlayerPawnAthena* RandomPawn = bot->GetRandomPawn();
-
-                        AFortPlayerPawnAthena* RandomPawn = bot->GetRandomPawn();
-
+                        APawn* RandomPawn = bot->GetRandomPawn();
                         if (RandomPawn) bot->LookAt(RandomPawn);
                     }
                 }
