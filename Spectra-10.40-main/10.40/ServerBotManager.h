@@ -2,7 +2,6 @@
 #include "pch.h"
 
 #include "AIController.h"
-#include "GameMode.h"
 
 namespace ServerBotManager {
     AFortPlayerPawnAthena* (*SpawnBotOG)(UFortServerBotManagerAthena* This, FVector SpawnLoc, FRotator SpawnRot, UFortAthenaAIBotCustomizationData* BotData);

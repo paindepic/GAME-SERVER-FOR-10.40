@@ -75,7 +75,7 @@ namespace Controller
 
         if (Command == "SpawnBot")
         {
-            Bots::SpawnPlayerBot(PC->Pawn, PlayerBots::EBotState::Landed);
+            Bots::SpawnPlayerBot(PC->Pawn, PlayerBots::EBotState::Landed, false);
         }
 
         if (Command == "StartAircraftEarly")
