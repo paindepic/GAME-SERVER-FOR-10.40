@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 
+#include "PlayerBots.h"
 #include "BotNames.h"
 
 namespace Bots {
@@ -56,7 +57,7 @@ namespace Bots {
                     if (Distance < City.Radius) {
                         bInCity = true;
                         CityName = City.Name;
-                        std::string cityNameStr(reinterpret_cast<const char*>(CityName.c_str()), CityName.Num());
+                        std::string cityNameStr = CityName.ToString();
                         std::stringstream ss;
                         ss << "[ROOF SPAWN] Found building in " << cityNameStr << " (footprint: " << static_cast<int>(Footprint) << ")";
                         Log(ss.str());

@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 
+#include "PlayerBots.h"
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
 #include "Bots.h"
@@ -105,7 +106,7 @@ namespace GameMode
             int32 PlaylistId = Playlist->PlaylistId;
 
             {
-                std::string playlistName = Playlist->GetName().ToString();
+                std::string playlistName = Playlist->GetName();
                 Log(std::string("Playlist = ") + playlistName);
             }
 
