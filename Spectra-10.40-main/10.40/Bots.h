@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 
-#include "ServerBotManager.h"
 #include "BotNames.h"
 
 namespace Bots {
@@ -74,11 +73,8 @@ namespace Bots {
             }
         }
         
-        {
-            std::stringstream ss;
-            ss << "[ROOF SPAWN] Found " << LargeFoundations.Num() << " large buildings (cities only: " << (bCitiesOnly ? "YES" : "NO") << ")";
-            Log(ss.str());
-        }
+        Log(std::string("[ROOF SPAWN] Found ") + std::to_string(LargeFoundations.Num())
+            + " large buildings (cities only: " + std::string(bCitiesOnly ? "YES" : "NO") + ")");
         
         return LargeFoundations;
     }
@@ -193,16 +189,12 @@ namespace Bots {
                     SpawnLocation = RoofLoc;
                     bActuallySpawnedOnRoof = true;
 
-                    {
-                        std::stringstream ss;
-                        ss << "[ROOF SPAWN] Bot spawning on " << (bUseCity ? "CITY" : "large building")
-                           << " roof at X=" << static_cast<int>(RoofLoc.X)
-                           << ", Y=" << static_cast<int>(RoofLoc.Y)
-                           << ", Z=" << static_cast<int>(RoofLoc.Z)
-                           << " (Height: " << static_cast<int>(BuildingHeight)
-                           << ", Footprint: " << static_cast<int>(BuildingFootprint) << ")";
-                        Log(ss.str());
-                    }
+                    Log(std::string("[ROOF SPAWN] Bot spawning on ") + (bUseCity ? "CITY" : "large building")
+                        + " roof at X=" + std::to_string(RoofLoc.X)
+                        + ", Y=" + std::to_string(RoofLoc.Y)
+                        + ", Z=" + std::to_string(RoofLoc.Z)
+                        + " (Height: " + std::to_string(BuildingHeight)
+                        + ", Footprint: " + std::to_string(BuildingFootprint) + ")");
                 }
             } else {
                 Log("[ROOF SPAWN] No suitable buildings found, using normal spawn!");

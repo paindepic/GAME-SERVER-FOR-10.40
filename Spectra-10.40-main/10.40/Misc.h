@@ -6,9 +6,7 @@ namespace Misc {
     static void KickPlayer(AGameSession* GameSession, AController* Controller)
     {
         std::string playerName = Controller->PlayerState->GetPlayerName().ToString();
-        std::stringstream ss;
-        ss << "KickPlayer Called! PlayerName: " << playerName;
-        Log(ss.str());
+        Log(std::string("KickPlayer Called! PlayerName: ") + playerName);
         return;
     }
 

@@ -959,8 +959,8 @@ namespace PlayerBots {
         bool IsMaximumHealingReached(PlayerBot* bot, UFortItemDefinition* ItemDef) {
             if (!bot || !bot->Pawn || !ItemDef) return true;
             std::string ItemName = ItemDef->Name.ToString();
-            float Health = bot->Pawn->GetHealth();
-            float Shield = bot->Pawn->GetShield();
+            float Health = static_cast<AFortPawn*>(bot->Pawn)->GetHealth();
+            float Shield = static_cast<AFortPawn*>(bot->Pawn)->GetShield();
             bool bMaximumHealingReached = false;
             if (ItemName.contains("Medkit") && Health >= 100.f) bMaximumHealingReached = true;
             if (ItemName.contains("Bandage") && Health >= 75.f) bMaximumHealingReached = true;
@@ -970,8 +970,8 @@ namespace PlayerBots {
         }
 
         FFortItemEntry GetCurrentHealingItemEntry(PlayerBot* bot) {
-            float Health = bot->Pawn->GetHealth();
-            float Shield = bot->Pawn->GetShield();
+            float Health = static_cast<AFortPawn*>(bot->Pawn)->GetHealth();
+            float Shield = static_cast<AFortPawn*>(bot->Pawn)->GetShield();
             for (FFortItemEntry ItemEntry : bot->PC->Inventory->Inventory.ReplicatedEntries) {
                 if (!ItemEntry.ItemDefinition) continue;
                 std::string ItemName = ItemEntry.ItemDefinition->Name.ToString();
@@ -996,8 +996,8 @@ namespace PlayerBots {
         }
 
         bool ShouldHeal(PlayerBot* bot) {
-            float Health = bot->Pawn->GetHealth();
-            float Shield = bot->Pawn->GetShield();
+            float Health = static_cast<AFortPawn*>(bot->Pawn)->GetHealth();
+            float Shield = static_cast<AFortPawn*>(bot->Pawn)->GetShield();
             if (Health != 100 && Shield != 100) {
                 bot->CurrentHealingType = EBotHealingType::Both;
                 return true;
@@ -1131,7 +1131,7 @@ namespace PlayerBots {
             } else {
                 // Close enough, evaluate threat
                 if (bot->LastDetectedSound.SourcePawn && bot->HasGun()) {
-                    float HealthPercent = bot->Pawn->GetHealth() / bot->Pawn->GetMaxHealth();
+                    float HealthPercent = static_cast<AFortPawn*>(bot->Pawn)->GetHealth() / static_cast<AFortPawn*>(bot->Pawn)->GetMaxHealth();
                     if (HealthPercent > 0.5f && bot->Personality != EBotPersonality::Tactical) {
                         bot->BotState = EBotState::Combat;
                         bot->NearestPlayerPawn = (AFortPlayerPawnAthena*)bot->LastDetectedSound.SourcePawn;
@@ -1149,7 +1149,7 @@ namespace PlayerBots {
     class BotsBTService_AIEvaluator {
     public:
         bool IsStressed(AFortPlayerPawnAthena* Pawn) {
-            if (Pawn->GetHealth() <= 75) return true;
+            if (static_cast<AFortPawn*>(Pawn)->GetHealth() <= 75) return true;
             return false;
         }
 
@@ -1159,8 +1159,8 @@ namespace PlayerBots {
 
         EBotLootingFilter GetCurrentLootingChoice(PlayerBot* bot) {
             BotsBTService_Healing HealingManager;
-            float Health = bot->Pawn->GetHealth();
-            float Shield = bot->Pawn->GetShield();
+            float Health = static_cast<AFortPawn*>(bot->Pawn)->GetHealth();
+            float Shield = static_cast<AFortPawn*>(bot->Pawn)->GetShield();
             FFortItemEntry HealingItemEntry = HealingManager.GetCurrentHealingItemEntry(bot);
             if (bot->BotState == EBotState::Warmup) {
                 if (!bot->HasGun()) return EBotLootingFilter::Weapons;
@@ -1463,7 +1463,7 @@ namespace PlayerBots {
             
             switch (bot->Personality) {
             case EBotPersonality::Aggressive:
-                if (bot->bIsStressed && bot->Pawn->GetHealth() < 50) return EBotBuildPattern::DefensiveWall;
+                if (bot->bIsStressed && static_cast<AFortPawn*>(bot->Pawn)->GetHealth() < 50) return EBotBuildPattern::DefensiveWall;
                 if (Dist < 800 && HeightDiff < -200) return EBotBuildPattern::RampRush;
                 return EBotBuildPattern::None;
             case EBotPersonality::Builder:
@@ -1472,7 +1472,7 @@ namespace PlayerBots {
                 if (Dist < 1500 && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.3f)) return EBotBuildPattern::Nineties;
                 return EBotBuildPattern::DefensiveBox;
             case EBotPersonality::Tactical:
-                if (bot->bIsStressed || bot->Pawn->GetHealth() < 60) return EBotBuildPattern::DefensiveBox;
+                if (bot->bIsStressed || static_cast<AFortPawn*>(bot->Pawn)->GetHealth() < 60) return EBotBuildPattern::DefensiveBox;
                 if (HeightDiff > 150) return EBotBuildPattern::HighGroundRetake;
                 if (Dist < 600) return EBotBuildPattern::DefensiveWall;
                 return EBotBuildPattern::None;
@@ -1759,7 +1759,7 @@ namespace PlayerBots {
                                 }
                                 bot->FarmedMaterials.ObjectsFarmed++;
                                 
-                                {std::stringstream ss; ss << "[LOBBY FARM] Bot farmed materials: W=" << bot->FarmedMaterials.Wood << ", S=" << bot->FarmedMaterials.Stone << ", M=" << bot->FarmedMaterials.Metal; Log(ss.str());}
+                                Log(std::string("[LOBBY FARM] Bot farmed materials: W=") + std::to_string(bot->FarmedMaterials.Wood) + ", S=" + std::to_string(bot->FarmedMaterials.Stone) + ", M=" + std::to_string(bot->FarmedMaterials.Metal));
                             }
                         }
                     }
@@ -2203,7 +2203,7 @@ namespace PlayerBots {
             bot->TimeInCurrentStance += 0.1f;
             
             // Change stance based on situation
-            if (bot->bIsStressed && bot->Pawn->GetHealth() < 50) {
+            if (bot->bIsStressed && static_cast<AFortPawn*>(bot->Pawn)->GetHealth() < 50) {
                 bot->CombatStance = EBotCombatStance::Retreating;
             } else if (bot->Personality == EBotPersonality::Aggressive && Distance > 400) {
                 bot->CombatStance = EBotCombatStance::Pushing;
