@@ -1,5 +1,5 @@
 #pragma once
-#include "framework.h"
+#include "pch.h"
 
 #include "ServerBotManager.h"
 #include "BotNames.h"
@@ -59,7 +59,7 @@ namespace Bots {
 		if (OverrideSpawnLoc) {
 			BotSpawn = OverrideSpawnLoc;
 		}
-		
+
 		// Support roof spawning
 		FVector SpawnLocation = BotSpawn->K2_GetActorLocation();
 		if (bSpawnOnRoof && BuildingFoundations.Num() > 0) {
@@ -72,7 +72,7 @@ namespace Bots {
 				SpawnLocation = RoofLoc;
 			}
 		}
-		
+
 		AFortPlayerPawnAthena* Pawn = GameMode->ServerBotManager->SpawnBot(SpawnLocation, BotSpawn->K2_GetActorRotation(), BotCustomizationData);
 		if (!Pawn)
 			return;

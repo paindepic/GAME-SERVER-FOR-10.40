@@ -1,5 +1,5 @@
 #pragma once
-#include "framework.h"
+#include "pch.h"
 
 namespace Looting
 {
@@ -19,7 +19,7 @@ namespace Looting
 		}
 
 		const FDataTableRowHandle& Handle = Weapon->WeaponStatHandle;
-		if (!Handle.DataTable) 
+		if (!Handle.DataTable)
 		{
 			Log("GetWeaponStats: Handle Issue?");
 			return nullptr;

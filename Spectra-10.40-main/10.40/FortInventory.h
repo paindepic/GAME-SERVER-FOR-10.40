@@ -1,5 +1,5 @@
 #pragma once
-#include "framework.h"
+#include "pch.h"
 
 namespace FortInventory
 {
@@ -126,11 +126,11 @@ namespace FortInventory
 
 	static EFortQuickBars GetQuickBars(UFortItemDefinition* ItemDefinition)
 	{
-		if (!ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()) && 
+		if (!ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()) &&
 			!ItemDefinition->IsA(UFortEditToolItemDefinition::StaticClass()) &&
-			!ItemDefinition->IsA(UFortBuildingItemDefinition::StaticClass()) && 
-			!ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) && 
-			!ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) && 
+			!ItemDefinition->IsA(UFortBuildingItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) &&
 			!ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
 			return EFortQuickBars::Primary;
 
@@ -140,7 +140,7 @@ namespace FortInventory
 	static bool IsFullInventory(AFortPlayerController* PC)
 	{
 		if (!PC || !PC->WorldInventory) return true;
-		
+
 		static constexpr int Max = 5;
 		int Count = 0;
 

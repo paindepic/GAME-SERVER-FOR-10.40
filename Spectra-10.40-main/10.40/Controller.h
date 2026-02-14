@@ -1,5 +1,5 @@
 #pragma once
-#include "framework.h"
+#include "pch.h"
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
 #include "Looting.h"
@@ -72,7 +72,7 @@ namespace Controller
 		std::string Command = Msg.ToString();
 		Log(Command);
 
-		if (Command == "SpawnBot") 
+		if (Command == "SpawnBot")
 		{
 			Bots::SpawnPlayerBot(PC->Pawn, PlayerBots::EBotState::Landed);
 		}
@@ -183,7 +183,7 @@ namespace Controller
 		EditTool->EditActor = BuildingActorToEdit;
 		EditTool->OnRep_EditActor();
 	}
-	 
+
 	void ServerEndEditingBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToStopEditing) {
 		if (!BuildingActorToStopEditing || !PC->MyFortPawn || BuildingActorToStopEditing->bDestroyed || BuildingActorToStopEditing->EditingPlayer != PC->PlayerState)
 			return;
@@ -392,7 +392,7 @@ namespace Controller
 	void HookAll()
 	{
 		HookVTable<AFortPlayerControllerAthena>(0x108, ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
-		
+
 		MH_CreateHook((LPVOID)(ImageBase + 0x19C7940), ServerReadyToStartMatch, (LPVOID*)&ServerReadyToStartMatchOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x1F19990), ServerLoadingScreenDropped, (LPVOID*)&ServerLoadingScreenDroppedOG);
