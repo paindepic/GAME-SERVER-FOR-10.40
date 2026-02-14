@@ -6,6 +6,10 @@
 #include "AbilitySystemComponent.h"
 #include "Bots.h"
 
+// Callback implementation pour éviter le cycle d'inclusion
+// Défini après les includes car utilise GameMode::FBotSpawnManager
+void BotSpawnProgressCallbackImpl();
+
 namespace GameMode
 {
     // Bot Spawn Manager - Handles automatic progressive bot spawning
@@ -26,6 +30,8 @@ namespace GameMode
             LastSpawnTime = 0.f;
             bSpawnInProgress = true;
             bInitialized = true;
+            // Initialiser le callback pour ServerBotManager
+            BotSpawnProgressCallback = BotSpawnProgressCallbackImpl;
             Log(std::string("[BOT SPAWNER] Initialized spawning ") + std::to_string(NumBots) + " bots");
         }
 
@@ -66,6 +72,11 @@ namespace GameMode
             }
         }
     };
+
+    // Implementation du callback après la définition de FBotSpawnManager
+    inline void BotSpawnProgressCallbackImpl() {
+        FBotSpawnManager::TickSpawn();
+    }
 
     int32 FBotSpawnManager::BotsToSpawn = 0;
     int32 FBotSpawnManager::BotsSpawned = 0;
@@ -288,11 +299,30 @@ namespace GameMode
     void (*HandleStartingNewPlayerOG)(AGameModeBase* This, AFortPlayerControllerAthena* NewPlayer);
     void HandleStartingNewPlayer(AGameModeBase* This, AFortPlayerControllerAthena* NewPlayer)
     {
+        // VÉRIFICATIONS CRITIQUES
+        if (!NewPlayer) {
+            Log("[CRASH FIX] NewPlayer is null!");
+            return;
+        }
+
         AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
+        if (!GameMode) {
+            Log("[CRASH FIX] GameMode is null!");
+            return HandleStartingNewPlayerOG(This, NewPlayer);
+        }
+
         AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+        if (!GameState) {
+            Log("[CRASH FIX] GameState is null!");
+            return HandleStartingNewPlayerOG(This, NewPlayer);
+        }
 
         //APlayerPawn_Athena_C* NewPawn = SpawnAActor<APlayerPawn_Athena_C>(NewPlayer->K2_GetActorLocation(), NewPlayer->K2_GetActorRotation());
         AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)NewPlayer->PlayerState;
+        if (!PlayerState) {
+            Log("[CRASH FIX] PlayerState is null!");
+            return HandleStartingNewPlayerOG(This, NewPlayer);
+        }
 
         /*NewPlayer->Possess(NewPawn);
 
