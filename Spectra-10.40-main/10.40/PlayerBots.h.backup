@@ -1759,7 +1759,8 @@ namespace PlayerBots {
                                 }
                                 bot->FarmedMaterials.ObjectsFarmed++;
                                 
-                                {std::stringstream ss; ss << "[LOBBY FARM] Bot farmed materials: W=" << bot->FarmedMaterials.Wood << ", S=" << bot->FarmedMaterials.Stone << ", M=" << bot->FarmedMaterials.Metal; Log(ss.str());}
+                                Log(std::format("[LOBBY FARM] Bot farmed materials: W={}, S={}, M={}", 
+                                    bot->FarmedMaterials.Wood, bot->FarmedMaterials.Stone, bot->FarmedMaterials.Metal).c_str());
                             }
                         }
                     }
@@ -1816,7 +1817,7 @@ namespace PlayerBots {
                     bot->NinetiesBuildsCompleted++;
                     
                     if (bot->NinetiesBuildsCompleted % 8 == 0) {
-                        {std::stringstream ss; ss << "[LOBBY 90s] Bot completed " << (bot->NinetiesBuildsCompleted / 4) << " 90s cycles"; Log(ss.str());}
+                        Log(std::format("[LOBBY 90s] Bot completed {} 90s cycles", bot->NinetiesBuildsCompleted / 4).c_str());
                     }
                 }
             }
@@ -1847,7 +1848,7 @@ namespace PlayerBots {
                     bot->Pawn->PawnStopFire(0);
                     
                     bot->EditsCompleted++;
-                    {std::stringstream ss; ss << "[LOBBY EDIT] Bot completed " << bot->EditsCompleted << " edits"; Log(ss.str());}
+                    Log(std::format("[LOBBY EDIT] Bot completed {} edits", bot->EditsCompleted).c_str());
                 }
                 
                 // Move around between edits
@@ -1896,7 +1897,7 @@ namespace PlayerBots {
                         bot->TargetDropZone.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
                         bot->TargetDropZone.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
                         
-                        {std::stringstream ss; ss << "[DROP ZONE] Roof bot targeting large building roof at Z=" << bot->TargetDropZone.Z; Log(ss.str());}
+                        Log(std::format("[DROP ZONE] Roof bot targeting large building roof at Z={:.1f}", bot->TargetDropZone.Z).c_str());
                         return;
                     }
                 }
@@ -1989,7 +1990,7 @@ namespace PlayerBots {
                     
                     // IMPROVED: Much higher jump probability (90% instead of 75%)
                     if (Math->RandomBoolWithWeight(0.9f)) {
-                        {std::stringstream ss; ss << "[BUS JUMP] Bot jumping at distance " << DistanceToDrop << " from drop zone"; Log(ss.str());}
+                        Log(std::format("[BUS JUMP] Bot jumping at distance {:.1f} from drop zone", DistanceToDrop).c_str());
                         bot->Pawn->BeginSkydiving(true);
                         bot->BotState = EBotState::Skydiving;
                         bot->bHasJumpedFromBus = true;
@@ -1999,7 +2000,7 @@ namespace PlayerBots {
                 
                 // IMPROVED: Early jump trigger if very close to drop zone
                 if (DistanceToDrop < 1500.f && Math->RandomBoolWithWeight(0.8f)) {
-                    {std::stringstream ss; ss << "[BUS JUMP] Early jump at distance " << DistanceToDrop; Log(ss.str());}
+                    Log(std::format("[BUS JUMP] Early jump at distance {:.1f}", DistanceToDrop).c_str());
                     bot->Pawn->BeginSkydiving(true);
                     bot->BotState = EBotState::Skydiving;
                     bot->bHasJumpedFromBus = true;

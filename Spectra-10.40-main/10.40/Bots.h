@@ -57,8 +57,10 @@ namespace Bots {
                     if (Distance < City.Radius) {
                         bInCity = true;
                         CityName = City.Name;
-                        Log(std::format("[ROOF SPAWN] Found building in {} (footprint: {:.0f})", 
-                            std::string(reinterpret_cast<const char*>(CityName.c_str()), CityName.Num()), Footprint).c_str());
+                        std::string cityNameStr(reinterpret_cast<const char*>(CityName.c_str()), CityName.Num());
+                        std::stringstream ss;
+                        ss << "[ROOF SPAWN] Found building in " << cityNameStr << " (footprint: " << static_cast<int>(Footprint) << ")";
+                        Log(ss.str());
                         break;
                     }
                 }
@@ -72,8 +74,11 @@ namespace Bots {
             }
         }
         
-        Log(std::format("[ROOF SPAWN] Found {} large buildings (cities only: {})", 
-            LargeFoundations.Num(), bCitiesOnly ? "YES" : "NO").c_str());
+        {
+            std::stringstream ss;
+            ss << "[ROOF SPAWN] Found " << LargeFoundations.Num() << " large buildings (cities only: " << (bCitiesOnly ? "YES" : "NO") << ")";
+            Log(ss.str());
+        }
         
         return LargeFoundations;
     }
@@ -157,9 +162,12 @@ namespace Bots {
                 CityBuildingCache = GetLargeBuildingFoundations(8000.0f, true); // Cities only
                 AllLargeBuildingCache = GetLargeBuildingFoundations(8000.0f, false); // All large buildings
                 bCacheInitialized = true;
-                
-                Log(std::format("[ROOF SPAWN] Cached {} city buildings, {} total large buildings",
-                    CityBuildingCache.Num(), AllLargeBuildingCache.Num()).c_str());
+
+                {
+                    std::stringstream ss;
+                    ss << "[ROOF SPAWN] Cached " << CityBuildingCache.Num() << " city buildings, " << AllLargeBuildingCache.Num() << " total large buildings";
+                    Log(ss.str());
+                }
             }
             
             // Prefer city buildings (70% chance) for better distribution
@@ -184,10 +192,17 @@ namespace Bots {
                     RoofLoc.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-150.f, 150.f);
                     SpawnLocation = RoofLoc;
                     bActuallySpawnedOnRoof = true;
-                    
-                    Log(std::format("[ROOF SPAWN] Bot spawning on {} roof at X={:.0f}, Y={:.0f}, Z={:.0f} (Height: {:.0f}, Footprint: {:.0f})",
-                        bUseCity ? "CITY" : "large building",
-                        RoofLoc.X, RoofLoc.Y, RoofLoc.Z, BuildingHeight, BuildingFootprint).c_str());
+
+                    {
+                        std::stringstream ss;
+                        ss << "[ROOF SPAWN] Bot spawning on " << (bUseCity ? "CITY" : "large building")
+                           << " roof at X=" << static_cast<int>(RoofLoc.X)
+                           << ", Y=" << static_cast<int>(RoofLoc.Y)
+                           << ", Z=" << static_cast<int>(RoofLoc.Z)
+                           << " (Height: " << static_cast<int>(BuildingHeight)
+                           << ", Footprint: " << static_cast<int>(BuildingFootprint) << ")";
+                        Log(ss.str());
+                    }
                 }
             } else {
                 Log("[ROOF SPAWN] No suitable buildings found, using normal spawn!");
