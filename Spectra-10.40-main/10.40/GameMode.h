@@ -23,9 +23,10 @@ namespace GameMode
 
         static void InitializeBotSpawning(int32 NumBots)
         {
-            BotsToSpawn = NumBots;
+            // Limiter le nombre de bots au démarrage pour éviter les crashs
+            BotsToSpawn = NumBots;  // ou réduire : std::min(NumBots, 20) pour tester
             BotsSpawned = 0;
-            SpawnDelay = 0.3f;
+            SpawnDelay = 0.5f;  // Augmenter le délai pour plus de stabilité
             LastSpawnTime = 0.f;
             bSpawnInProgress = true;
             bInitialized = true;
@@ -75,7 +76,7 @@ namespace GameMode
     int32 FBotSpawnManager::BotsToSpawn = 0;
     int32 FBotSpawnManager::BotsSpawned = 0;
     float FBotSpawnManager::LastSpawnTime = 0.f;
-    float FBotSpawnManager::SpawnDelay = 0.3f;
+    float FBotSpawnManager::SpawnDelay = 0.5f;
     bool FBotSpawnManager::bSpawnInProgress = false;
     bool FBotSpawnManager::bInitialized = false;
     bool (*ReadyToStartMatchOG)(AGameMode*);
@@ -376,6 +377,11 @@ namespace GameMode
     {
         Log("OnAircraftExitedDropZone!");
 
+        if (!GameMode) {
+            Log("[CRASH FIX] GameMode is null!");
+            return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
+        }
+
         if (Globals::bBotsEnabled) {
             AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
             if (!GameState) {
@@ -391,6 +397,12 @@ namespace GameMode
 
             FVector AircraftLocation = Aircraft->K2_GetActorLocation();
 
+            // Vérifier que PlayerBotArray est valide
+            if (PlayerBots::PlayerBotArray.empty()) {
+                Log("[BOT DROP] No bots to process");
+                return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
+            }
+
             for (auto PlayerBot : PlayerBots::PlayerBotArray) {
                 if (!PlayerBot) {
                     Log("[CRASH FIX] PlayerBot is null in OnAircraftExitedDropZone!");
@@ -400,7 +412,20 @@ namespace GameMode
                     Log("[CRASH FIX] PlayerBot->Pawn is null in OnAircraftExitedDropZone!");
                     continue;
                 }
-                if (!PlayerBot->bHasJumpedFromBus) {
+                // Vérifier si le bot est déjà en skydiving
+                if (PlayerBot->bHasJumpedFromBus) {
+                    continue;
+                }
+                // Vérifier que le Pawn n'est pas déjà en skydiving
+                if (PlayerBot->Pawn->bIsSkydiving) {
+                    PlayerBot->bHasJumpedFromBus = true;
+                    PlayerBot->BotState = PlayerBots::EBotState::Skydiving;
+                    continue;
+                }
+
+                // NOUVEAU : Vérifier que le bot est dans l'avion avant de téléporter
+                AFortPlayerStateAthena* BotPlayerState = (AFortPlayerStateAthena*)PlayerBot->Pawn->PlayerState;
+                if (BotPlayerState && BotPlayerState->bInAircraft) {
                     PlayerBot->Pawn->K2_TeleportTo(AircraftLocation, {});
                     PlayerBot->Pawn->BeginSkydiving(true);
                     PlayerBot->bHasJumpedFromBus = true;
