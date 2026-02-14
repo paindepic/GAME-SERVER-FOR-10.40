@@ -4,9 +4,72 @@
 
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
+#include "Bots.h"
 
 namespace GameMode
 {
+    // Bot Spawn Manager - Handles automatic progressive bot spawning
+    struct FBotSpawnManager
+    {
+        static int32 BotsToSpawn;
+        static int32 BotsSpawned;
+        static float LastSpawnTime;
+        static float SpawnDelay;
+        static bool bSpawnInProgress;
+        static bool bInitialized;
+
+        static void InitializeBotSpawning(int32 NumBots)
+        {
+            BotsToSpawn = NumBots;
+            BotsSpawned = 0;
+            SpawnDelay = 0.3f;
+            LastSpawnTime = 0.f;
+            bSpawnInProgress = true;
+            bInitialized = true;
+            Log(std::format("[BOT SPAWNER] Initialized spawning {} bots", NumBots).c_str());
+        }
+
+        static void TickSpawn()
+        {
+            if (!bSpawnInProgress || BotsSpawned >= BotsToSpawn)
+            {
+                if (bSpawnInProgress && BotsSpawned >= BotsToSpawn)
+                {
+                    bSpawnInProgress = false;
+                    Log(std::format("[BOT SPAWNER] All {} bots spawned successfully!", BotsSpawned).c_str());
+                }
+                return;
+            }
+
+            float CurrentTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
+            if (CurrentTime - LastSpawnTime >= SpawnDelay)
+            {
+                bool bSpawnOnRoof = (BotsSpawned % 4 == 0);
+                Bots::SpawnPlayerBot(nullptr, PlayerBots::EBotState::Warmup, bSpawnOnRoof);
+
+                BotsSpawned++;
+                LastSpawnTime = CurrentTime;
+
+                if (BotsSpawned % 10 == 0)
+                {
+                    Log(std::format("[BOT SPAWNER] Spawned {}/{} bots", BotsSpawned, BotsToSpawn).c_str());
+                }
+
+                if (BotsSpawned >= BotsToSpawn)
+                {
+                    bSpawnInProgress = false;
+                    Log(std::format("[BOT SPAWNER] All {} bots spawned successfully!", BotsSpawned).c_str());
+                }
+            }
+        }
+    };
+
+    int32 FBotSpawnManager::BotsToSpawn = 0;
+    int32 FBotSpawnManager::BotsSpawned = 0;
+    float FBotSpawnManager::LastSpawnTime = 0.f;
+    float FBotSpawnManager::SpawnDelay = 0.3f;
+    bool FBotSpawnManager::bSpawnInProgress = false;
+    bool FBotSpawnManager::bInitialized = false;
     bool (*ReadyToStartMatchOG)(AGameMode*);
     bool ReadyToStartMatch(AFortGameModeAthena* GameMode)
     {
@@ -186,6 +249,12 @@ namespace GameMode
             UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), ABuildingFoundation::StaticClass(), &BuildingFoundations);
             for (AActor* BuildingFoundation : BuildingFoundations) {
                 FVector Loc = BuildingFoundation->K2_GetActorLocation();
+            }
+
+            if (!FBotSpawnManager::bInitialized && Globals::bBotsEnabled)
+            {
+                Log("[BOT SPAWNER] Initializing automatic bot spawning...");
+                FBotSpawnManager::InitializeBotSpawning(Globals::MaxBotsToSpawn);
             }
 
             return true;
