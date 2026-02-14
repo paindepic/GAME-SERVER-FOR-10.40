@@ -1609,7 +1609,7 @@ namespace PlayerBots {
         bool CanBuild(PlayerBot* bot, EBotBuildingType BuildType) {
             if (!bot || !bot->Pawn || !bot->PC) return false;
             
-            float CurrentTime = UWorld::GetWorld()->TimeSeconds;
+            float CurrentTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
             if (CurrentTime - bot->LastBuildTime < bot->BuildCooldown) {
                 return false;
             }
@@ -1645,7 +1645,7 @@ namespace PlayerBots {
             bot->Pawn->PawnStopFire(0);
 
             ConsumeMaterials(bot, BuildType);
-            bot->LastBuildTime = UWorld::GetWorld()->TimeSeconds;
+            bot->LastBuildTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
             
             return true;
         }
