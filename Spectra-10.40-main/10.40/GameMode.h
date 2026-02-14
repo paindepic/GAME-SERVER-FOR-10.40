@@ -1,5 +1,5 @@
 #pragma once
-#include "framework.h"
+#include "pch.h"
 #include "ServerBotManager.h"
 
 #include "FortInventory.h"
@@ -53,7 +53,7 @@ namespace GameMode
 
 			Globals::MaxPlayersPerTeam = Playlist->MaxSquadSize;
 			Globals::NextTeamIndex = Playlist->DefaultFirstTeam;
-			Globals::NextBotTeamIndex = Playlist->DefaultLastTeam; //We be the same team as the bots
+			Globals::NextBotTeamIndex = Playlist->DefaultLastTeam; //We be = same team as bots
 
 			//Log(std::format("Globals::MaxPlayersPerTeam={}", Globals::MaxPlayersPerTeam).c_str());
 		}
@@ -124,6 +124,7 @@ namespace GameMode
 						{
 
 							Dances.push_back((UAthenaDanceItemDefinition*)Obj);
+
 						}
 
 					}
@@ -161,7 +162,7 @@ namespace GameMode
 
 			UWorld::GetWorld()->NetDriver = Driver;
 			SetWorld(Driver, UWorld::GetWorld());
-			
+
 			for (int i = 0; i < UWorld::GetWorld()->LevelCollections.Num(); i++)
 				UWorld::GetWorld()->LevelCollections[i].NetDriver = Driver;
 
@@ -272,7 +273,7 @@ namespace GameMode
 			}
 		}
 
-		// When we do the actual event we should set it to the timer
+		// When we do not actual event we should set it to timer
 		if (Globals::bEventEnabled)
 		{
 			UObject* TheEnd = nullptr;

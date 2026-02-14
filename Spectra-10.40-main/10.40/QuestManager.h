@@ -1,5 +1,5 @@
 #pragma once
-#include "framework.h"
+#include "pch.h"
 
 namespace QuestManager {
     void SendObjectiveStat(AFortPlayerControllerAthena* Controller, const FName& BackendName, const UFortQuestItemDefinition* QuestDefinition, int32 Count)
