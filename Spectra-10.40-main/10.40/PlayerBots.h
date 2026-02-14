@@ -1993,14 +1993,14 @@ namespace PlayerBots {
                     FVector AwayDir = bot->LastUpdatedBotLocation - bot->NearestPlayerPawn->K2_GetActorLocation();
                     AwayDir.Normalize();
                     FVector RetreatPos = bot->LastUpdatedBotLocation + AwayDir * 500.f;
-                    bot->PC->MoveToLocation(RetreatPos, 100.f, true, false, true, nullptr, true);
+                    bot->PC->MoveToLocation(RetreatPos, 100.f, true, false, true, true, nullptr, true);
                 }
                 break;
                 
             case EBotCombatStance::Flanking:
                 // Move to flank position
                 if (!bot->FlankTargetPosition.IsZero()) {
-                    bot->PC->MoveToLocation(bot->FlankTargetPosition, 100.f, true, false, true, nullptr, true);
+                    bot->PC->MoveToLocation(bot->FlankTargetPosition, 100.f, true, false, true, true, nullptr, true);
                     float DistToFlank = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(bot->LastUpdatedBotLocation, bot->FlankTargetPosition);
                     if (DistToFlank < 200.f) {
                         bot->CombatStance = EBotCombatStance::Engaged;
@@ -2035,7 +2035,7 @@ namespace PlayerBots {
             
             // Calculate perpendicular vector for flanking
             FVector PerpVector(-EnemyToBot.Y, EnemyToBot.X, 0);
-            if (UKismetMathLibrary::GetDefaultObj()->RandomBool()) PerpVector = -PerpVector;
+            if (UKismetMathLibrary::GetDefaultObj()->RandomBool()) PerpVector = PerpVector * -1.0f;
             
             float FlankDistance = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(400.f, 800.f);
             bot->FlankTargetPosition = EnemyPos + PerpVector * FlankDistance;
