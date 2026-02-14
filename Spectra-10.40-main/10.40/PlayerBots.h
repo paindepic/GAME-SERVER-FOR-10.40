@@ -158,7 +158,7 @@ namespace PlayerBots {
         EBotStrafeType StrafeType = EBotStrafeType::StrafeLeft;
         float StrafeEndTime = 0.0f;
         bool bPotentiallyUnderAttack = false;
-        APawn* NearestPlayerPawn = nullptr;
+        AFortPlayerPawnAthena* NearestPlayerPawn = nullptr;
         AFortPickup* NearestPickup = nullptr;
         ABuildingContainer* NearestChest = nullptr;
         FVector ClosestLootableLoc = FVector();
@@ -1089,7 +1089,7 @@ namespace PlayerBots {
                     float HealthPercent = bot->Pawn->GetHealth() / bot->Pawn->GetMaxHealth();
                     if (HealthPercent > 0.5f && bot->Personality != EBotPersonality::Tactical) {
                         bot->BotState = EBotState::Combat;
-                        bot->NearestPlayerPawn = bot->LastDetectedSound.SourcePawn;
+                        bot->NearestPlayerPawn = (AFortPlayerPawnAthena*)bot->LastDetectedSound.SourcePawn;
                     } else {
                         // Hold position or retreat
                         bot->BotState = EBotState::Looting;
@@ -1172,7 +1172,7 @@ namespace PlayerBots {
             }
 
             if (bot->tick_counter % 150 == 0) {
-                bot->NearestPlayerPawn = bot->GetNearestPawn();
+                bot->NearestPlayerPawn = (AFortPlayerPawnAthena*)bot->GetNearestPawn();
                 if (!bot->Pawn->bIsDBNO) {
                     AActor* LastLootable = nullptr;
                     if (bot->ClosestLootableType == ELootableType::Chest) LastLootable = bot->NearestChest;
