@@ -59,6 +59,9 @@ namespace PlayerBots {
         SocialGroup,
         ExploreSpawnIsland,
         DanceInGroup,
+        FarmMaterials,
+        PracticeNineties,
+        PracticeEdits,
         MAX
     };
 
@@ -139,6 +142,41 @@ namespace PlayerBots {
         }
     };
 
+    struct FWarmupTrajectory {
+        FVector StartPosition = FVector();
+        TArray<FVector> PathPoints;
+        float Speed = 300.f;
+        int32 CurrentPointIndex = 0;
+        
+        bool IsValid() const {
+            return !StartPosition.IsZero() && PathPoints.Num() > 0;
+        }
+        
+        FVector GetCurrentTarget() const {
+            if (CurrentPointIndex < PathPoints.Num()) {
+                return PathPoints[CurrentPointIndex];
+            }
+            return FVector();
+        }
+        
+        void AdvanceToNext() {
+            if (CurrentPointIndex < PathPoints.Num() - 1) {
+                CurrentPointIndex++;
+            }
+        }
+    };
+
+    struct FFarmedMaterials {
+        int32 Wood = 0;
+        int32 Stone = 0;
+        int32 Metal = 0;
+        int32 ObjectsFarmed = 0;
+        
+        int32 GetTotal() const {
+            return Wood + Stone + Metal;
+        }
+    };
+
     std::vector<class PlayerBot*> PlayerBotArray{};
     
     struct PlayerBot
@@ -210,6 +248,13 @@ namespace PlayerBots {
         float LastNaturalMoveUpdate = 0.f;
         float TargetArrivalTime = 0.f;
         bool bHasRoofSpawned = false;
+        FWarmupTrajectory WarmupTrajectory;
+        FFarmedMaterials FarmedMaterials;
+        AActor* CurrentFarmTarget = nullptr;
+        float WarmupTrainingStartTime = 0.f;
+        int32 NinetiesBuildsCompleted = 0;
+        int32 EditsCompleted = 0;
+        FVector LobbyFarmingArea = FVector();
 
     public:
         PlayerBot(AFortPlayerPawnAthena* Pawn, AFortAthenaAIBotController* PC, AFortPlayerStateAthena* PlayerState) {
@@ -1673,6 +1718,147 @@ namespace PlayerBots {
                     }
                 }
             }
+            // NEW: Farm materials in lobby
+            else if (bot->WarmupChoice == EBotWarmupChoice::FarmMaterials) {
+                if (bot->tick_counter % 100 == 0) {
+                    FVector BotLoc = bot->LastUpdatedBotLocation;
+                    
+                    // Initialize farming area on first tick
+                    if (bot->LobbyFarmingArea.IsZero()) {
+                        float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1500.f, 1500.f);
+                        float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1500.f, 1500.f);
+                        bot->LobbyFarmingArea = BotLoc + FVector(RandomX, RandomY, 0);
+                        Log("[LOBBY FARM] Bot assigned farming area");
+                    }
+                    
+                    // Find farmable objects (simple simulation - in real game would trace for objects)
+                    if (!bot->CurrentFarmTarget || bot->CurrentFarmTarget->bHidden) {
+                        // Move to farming area
+                        float Dist = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(BotLoc, bot->LobbyFarmingArea);
+                        if (Dist > 200.f) {
+                            bot->PC->MoveToLocation(bot->LobbyFarmingArea, 50.0f, false, true, false, true, nullptr, true);
+                        } else {
+                            // Simulate farming
+                            bot->EquipPickaxe();
+                            bot->Pawn->PawnStartFire(0);
+                            
+                            // Simulate material gain
+                            if (bot->tick_counter % 20 == 0) {
+                                int32 MaterialType = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 2);
+                                int32 Amount = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(20, 40);
+                                
+                                if (MaterialType == 0 && bot->FarmedMaterials.Wood < 200) {
+                                    bot->FarmedMaterials.Wood += Amount;
+                                    bot->WoodCount += Amount;
+                                } else if (MaterialType == 1 && bot->FarmedMaterials.Stone < 150) {
+                                    bot->FarmedMaterials.Stone += Amount;
+                                    bot->StoneCount += Amount;
+                                } else if (MaterialType == 2 && bot->FarmedMaterials.Metal < 100) {
+                                    bot->FarmedMaterials.Metal += Amount;
+                                    bot->MetalCount += Amount;
+                                }
+                                bot->FarmedMaterials.ObjectsFarmed++;
+                                
+                                Log(std::format("[LOBBY FARM] Bot farmed materials: W={}, S={}, M={}", 
+                                    bot->FarmedMaterials.Wood, bot->FarmedMaterials.Stone, bot->FarmedMaterials.Metal).c_str());
+                            }
+                        }
+                    }
+                }
+                
+                // Stop farming after a while
+                if (bot->tick_counter % 30 == 0) {
+                    bot->Pawn->PawnStopFire(0);
+                }
+            }
+            // NEW: Practice 90s in lobby
+            else if (bot->WarmupChoice == EBotWarmupChoice::PracticeNineties) {
+                if (bot->tick_counter % 150 == 0) {
+                    FVector BotLoc = bot->LastUpdatedBotLocation;
+                    FVector Forward = bot->Pawn->GetActorForwardVector();
+                    FVector Right = bot->Pawn->GetActorRightVector();
+                    
+                    // Build 90s pattern: wall -> ramp -> turn -> wall -> ramp
+                    int32 Step = bot->NinetiesBuildsCompleted % 4;
+                    
+                    if (Step == 0) {
+                        // Place wall
+                        bot->EquipBuildingItem(EBotBuildingType::Wall);
+                        bot->Pawn->BuildingState = EFortBuildingState::Placement;
+                        bot->Pawn->PawnStartFire(0);
+                        Sleep(50);
+                        bot->Pawn->PawnStopFire(0);
+                        Log("[LOBBY 90s] Placed wall");
+                    } else if (Step == 1) {
+                        // Place ramp
+                        bot->EquipBuildingItem(EBotBuildingType::Stair);
+                        bot->Pawn->BuildingState = EFortBuildingState::Placement;
+                        bot->Pawn->PawnStartFire(0);
+                        Sleep(50);
+                        bot->Pawn->PawnStopFire(0);
+                        bot->Pawn->Jump();
+                        Log("[LOBBY 90s] Placed ramp and jumped");
+                    } else if (Step == 2) {
+                        // Turn 90 degrees
+                        FRotator CurrentRot = bot->PC->GetControlRotation();
+                        CurrentRot.Yaw += 90.f;
+                        bot->PC->SetControlRotation(CurrentRot);
+                        Log("[LOBBY 90s] Turned 90 degrees");
+                    } else {
+                        // Place floor for base
+                        bot->EquipBuildingItem(EBotBuildingType::Floor);
+                        bot->Pawn->BuildingState = EFortBuildingState::Placement;
+                        bot->Pawn->PawnStartFire(0);
+                        Sleep(50);
+                        bot->Pawn->PawnStopFire(0);
+                        Log("[LOBBY 90s] Placed floor");
+                    }
+                    
+                    bot->NinetiesBuildsCompleted++;
+                    
+                    if (bot->NinetiesBuildsCompleted % 8 == 0) {
+                        Log(std::format("[LOBBY 90s] Bot completed {} 90s cycles", bot->NinetiesBuildsCompleted / 4).c_str());
+                    }
+                }
+            }
+            // NEW: Practice edits in lobby
+            else if (bot->WarmupChoice == EBotWarmupChoice::PracticeEdits) {
+                if (bot->tick_counter % 180 == 0) {
+                    int32 BuildType = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 3);
+                    EBotBuildingType Type = (EBotBuildingType)BuildType;
+                    
+                    // Place build
+                    bot->EquipBuildingItem(Type);
+                    bot->Pawn->BuildingState = EFortBuildingState::Placement;
+                    bot->Pawn->PawnStartFire(0);
+                    Sleep(50);
+                    bot->Pawn->PawnStopFire(0);
+                    
+                    // Wait a moment then edit
+                    Sleep(100);
+                    
+                    // Enter edit mode (simplified - real game would need to trace to building piece)
+                    bot->EquipBuildingItem(EBotBuildingType::Edit);
+                    bot->Pawn->BuildingState = EFortBuildingState::EditMode;
+                    Sleep(50);
+                    
+                    // Confirm edit
+                    bot->Pawn->PawnStartFire(0);
+                    Sleep(50);
+                    bot->Pawn->PawnStopFire(0);
+                    
+                    bot->EditsCompleted++;
+                    Log(std::format("[LOBBY EDIT] Bot completed {} edits", bot->EditsCompleted).c_str());
+                }
+                
+                // Move around between edits
+                if (bot->tick_counter % 90 == 0) {
+                    float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
+                    float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
+                    FVector TargetLoc = bot->LastUpdatedBotLocation + FVector(RandomX, RandomY, 0);
+                    bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
+                }
+            }
         }
     };
 
@@ -1779,30 +1965,47 @@ namespace PlayerBots {
                 FVector BusLocation = Bus->K2_GetActorLocation();
                 FVector DropTarget = bot->TargetDropZone;
                 DropTarget.Z = BusLocation.Z;
+                
+                // IMPROVED: Better bus jump detection and forced jump
                 if (GameState->GamePhase > EAthenaGamePhase::Aircraft) {
-                    Log("Force Jump");
-                    // MODIFIED: No teleport, use natural skydiving
+                    Log("[BUS JUMP] Force jump - phase changed from Aircraft!");
                     bot->Pawn->BeginSkydiving(true);
                     bot->BotState = EBotState::Skydiving;
                     bot->bHasJumpedFromBus = true;
                     return;
                 }
+                
                 float DistanceToDrop = Math->Vector_Distance(BusLocation, DropTarget);
+                
+                // More aggressive jump logic
                 if (DistanceToDrop < bot->ClosestDistToDropZone) {
                     bot->ClosestDistToDropZone = DistanceToDrop;
                 } else {
+                    // Bot has passed the closest point - jump now!
                     if (!bot->bHasThankedBusDriver && Math->RandomBoolWithWeight(0.5f)) {
                         bot->bHasThankedBusDriver = true;
                         bot->PlayerState->bThankedBusDriver = true;
                         bot->PlayerState->OnRep_ThankedBusDriver();
                     }
-                    if (Math->RandomBoolWithWeight(0.75)) {
-                        // MODIFIED: No teleport, use natural skydiving from current position
+                    
+                    // IMPROVED: Much higher jump probability (90% instead of 75%)
+                    if (Math->RandomBoolWithWeight(0.9f)) {
+                        Log(std::format("[BUS JUMP] Bot jumping at distance {:.1f} from drop zone", DistanceToDrop).c_str());
                         bot->Pawn->BeginSkydiving(true);
                         bot->BotState = EBotState::Skydiving;
                         bot->bHasJumpedFromBus = true;
+                        return;
                     }
                 }
+                
+                // IMPROVED: Early jump trigger if very close to drop zone
+                if (DistanceToDrop < 1500.f && Math->RandomBoolWithWeight(0.8f)) {
+                    Log(std::format("[BUS JUMP] Early jump at distance {:.1f}", DistanceToDrop).c_str());
+                    bot->Pawn->BeginSkydiving(true);
+                    bot->BotState = EBotState::Skydiving;
+                    bot->bHasJumpedFromBus = true;
+                }
+                
                 return;
             }
 
