@@ -32,12 +32,9 @@ namespace Controller
             Looting::SpawnFloorLoot();
             Vehicles::SpawnVehicles();
 
-            {
-                std::stringstream ss;
-                ss << "AFortPlayerController::ServerReadyToStartMatch bSetupWorld = " << (bSetupWorld ? "true" : "false");
-                Log(ss.str());
-            }
-            }
+            Log(std::string("AFortPlayerController::ServerReadyToStartMatch bSetupWorld = ")
+                + std::to_string(bSetupWorld));
+        }
 
         return ServerReadyToStartMatchOG(PC);
     }

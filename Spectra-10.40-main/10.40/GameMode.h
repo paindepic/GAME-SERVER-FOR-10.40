@@ -25,11 +25,7 @@ namespace GameMode
             LastSpawnTime = 0.f;
             bSpawnInProgress = true;
             bInitialized = true;
-            {
-                std::stringstream ss;
-                ss << "[BOT SPAWNER] Initialized spawning " << NumBots << " bots";
-                Log(ss.str());
-            }
+            Log(std::string("[BOT SPAWNER] Initialized spawning ") + std::to_string(NumBots) + " bots");
         }
 
         static void TickSpawn()
@@ -39,11 +35,8 @@ namespace GameMode
                 if (bSpawnInProgress && BotsSpawned >= BotsToSpawn)
                 {
                     bSpawnInProgress = false;
-                    {
-                        std::stringstream ss;
-                        ss << "[BOT SPAWNER] All " << BotsSpawned << " bots spawned successfully!";
-                        Log(ss.str());
-                    }
+                    Log(std::string("[BOT SPAWNER] All ") + std::to_string(BotsSpawned)
+                        + " bots spawned successfully!");
                 }
                 return;
             }
@@ -59,17 +52,15 @@ namespace GameMode
 
                 if (BotsSpawned % 10 == 0)
                 {
-                    std::stringstream ss;
-                    ss << "[BOT SPAWNER] Spawned " << BotsSpawned << "/" << BotsToSpawn << " bots";
-                    Log(ss.str());
+                    Log(std::string("[BOT SPAWNER] Spawned ") + std::to_string(BotsSpawned) + "/"
+                        + std::to_string(BotsToSpawn) + " bots");
                 }
 
                 if (BotsSpawned >= BotsToSpawn)
                 {
                     bSpawnInProgress = false;
-                    std::stringstream ss2;
-                    ss2 << "[BOT SPAWNER] All " << BotsSpawned << " bots spawned successfully!";
-                    Log(ss2.str());
+                    Log(std::string("[BOT SPAWNER] All ") + std::to_string(BotsSpawned)
+                        + " bots spawned successfully!");
                 }
             }
         }
@@ -99,11 +90,7 @@ namespace GameMode
         if (!bSetupPlaylist)
         {
             bSetupPlaylist = true;
-            {
-                std::stringstream ss;
-                ss << "bSetupPlaylist = " << (bSetupPlaylist ? "true" : "false");
-                Log(ss.str());
-            }
+            Log(std::string("bSetupPlaylist = ") + std::to_string(bSetupPlaylist));
 
             if (Globals::bEventEnabled) {
                 Playlist = StaticLoadObject<UFortPlaylistAthena>("/Game/Athena/Playlists/Music/Playlist_Music_High.Playlist_Music_High");
@@ -119,9 +106,7 @@ namespace GameMode
 
             {
                 std::string playlistName = Playlist->GetName().ToString();
-                std::stringstream ss;
-                ss << "Playlist = " << playlistName;
-                Log(ss.str());
+                Log(std::string("Playlist = ") + playlistName);
             }
 
             GameState->CurrentPlaylistInfo.BasePlaylist = Playlist;
@@ -147,7 +132,7 @@ namespace GameMode
             Globals::NextTeamIndex = Playlist->DefaultFirstTeam;
             Globals::NextBotTeamIndex = Playlist->DefaultLastTeam; //We be = same team as bots
 
-            //Log(std::format("Globals::MaxPlayersPerTeam={}", Globals::MaxPlayersPerTeam).c_str());
+            //Log(std::string("Globals::MaxPlayersPerTeam=") + std::to_string(Globals::MaxPlayersPerTeam));
         }
 
         if (!GameState->MapInfo) return ReadyToStartMatchOG(GameMode);
@@ -155,11 +140,7 @@ namespace GameMode
         if (!bInitialize)
         {
             bInitialize = true;
-            {
-                std::stringstream ss;
-                ss << "bInitialize = " << (bInitialize ? "true" : "false");
-                Log(ss.str());
-            }
+            Log(std::string("bInitialize = ") + std::to_string(bInitialize));
 
             GameState->OnRep_CurrentPlaylistId();
             GameState->OnRep_CurrentPlaylistInfo();
@@ -241,11 +222,7 @@ namespace GameMode
         if (!bIsNetReady)
         {
             bIsNetReady = true;
-            {
-                std::stringstream ss;
-                ss << "bIsNetReady = " << (bIsNetReady ? "true" : "false");
-                Log(ss.str());
-            }
+            Log(std::string("bIsNetReady = ") + std::to_string(bIsNetReady));
 
             FName NetDriverDefinition = UKismetStringLibrary::Conv_StringToName(L"GameNetDriver");
             UNetDriver* Driver = CreateNetDriver(UEngine::GetEngine(), UWorld::GetWorld(), NetDriverDefinition);
@@ -262,9 +239,7 @@ namespace GameMode
             if (!InitListen(Driver, UWorld::GetWorld(), NewURL, true, Error))
             {
                 std::string errorStr = Error.ToString();
-                std::stringstream ss;
-                ss << "UIpNetDriver::InitListen Error: " << errorStr;
-                Log(ss.str());
+                Log(std::string("UIpNetDriver::InitListen Error: ") + errorStr);
             }
 
             UWorld::GetWorld()->NetDriver = Driver;
@@ -273,11 +248,7 @@ namespace GameMode
             for (int i = 0; i < UWorld::GetWorld()->LevelCollections.Num(); i++)
                 UWorld::GetWorld()->LevelCollections[i].NetDriver = Driver;
 
-            {
-                std::stringstream ss;
-                ss << "IpNetDriver listening on port " << NewURL.Port << "!";
-                Log(ss.str());
-            }
+            Log(std::string("IpNetDriver listening on port ") + std::to_string(NewURL.Port) + "!");
             {
                 std::wstringstream wss;
                 wss << L"Spectra 10.40 | IpNetDriver listening on port " << NewURL.Port << L"!";
