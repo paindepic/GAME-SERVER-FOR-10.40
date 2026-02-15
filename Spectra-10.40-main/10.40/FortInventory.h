@@ -21,22 +21,29 @@ namespace FortInventory
     {
         if (!PC || !PC->WorldInventory) return -1;
 
-        // Count items in this quickbar type
-        int32 Count = 0;
+        // Count items in this quickbar type and track the highest OrderIndex used
+        int32 MaxOrderIndex = -1;
         for (int32 i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
         {
             FFortItemEntry& Entry = PC->WorldInventory->Inventory.ReplicatedEntries[i];
             UFortItemDefinition* Def = Entry.ItemDefinition;
             if (Def && GetQuickBars(Def) == QuickBarType)
             {
-                Count++;
+                // Track the highest OrderIndex for this quickbar type
+                if (Entry.OrderIndex > MaxOrderIndex) {
+                    MaxOrderIndex = Entry.OrderIndex;
+                }
             }
         }
 
+        // The next available slot is MaxOrderIndex + 1
+        int32 NextSlot = MaxOrderIndex + 1;
+
+        // Check if we have room for another slot
         int32 MaxSlots = (QuickBarType == EFortQuickBars::Primary) ? 5 : 2;
-        if (Count < MaxSlots)
+        if (NextSlot < MaxSlots)
         {
-            return Count;
+            return NextSlot;
         }
 
         return -1;
@@ -83,8 +90,9 @@ namespace FortInventory
         Item->SetOwningControllerForTemporaryItem(PC);
         Item->ItemEntry.LoadedAmmo = LoadedAmmo;
 
-        // Position field does not exist in SDK 10.40
-        // Quickbar slot management is handled differently in this version
+        // Set OrderIndex for proper quickbar slot assignment in SDK 10.40
+        // OrderIndex determines which slot the item goes in (0-4 for primary, 0-1 for secondary)
+        Item->ItemEntry.OrderIndex = PC->WorldInventory->Inventory.ReplicatedEntries.Num();
 
         /*if (Item && Item->ItemEntry.ItemDefinition) {
             FFortItemEntryStateValue Value{};
