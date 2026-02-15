@@ -448,11 +448,12 @@ namespace GameMode
                 }
 
                 if (!BotPlayerState->bInAircraft) {
-                    continue;
+                    BotPlayerState->bInAircraft = true;
                 }
 
                 PlayerBot->Pawn->K2_TeleportTo(AircraftLocation, FRotator(0, UKismetMathLibrary::RandomFloatInRange(0, 360), 0));
                 PlayerBot->Pawn->BeginSkydiving(true);
+                BotPlayerState->bInAircraft = false;
                 PlayerBot->bHasJumpedFromBus = true;
                 PlayerBot->BotState = PlayerBots::EBotState::Skydiving;
                 JumpedBots++;

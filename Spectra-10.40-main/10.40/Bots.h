@@ -295,6 +295,22 @@ namespace Bots {
         }
         Log("[BOT SPAWN] PlayerBot created and added to array. Total bots: " + std::to_string(PlayerBots::PlayerBotArray.size()));
 
+        PlayerBots::EBotState InitialState = StartingState;
+        if (StartingState == PlayerBots::EBotState::Warmup && GameState->GamePhase >= EAthenaGamePhase::Aircraft) {
+            InitialState = (GameState->GamePhaseStep == EAthenaGamePhaseStep::BusFlying)
+                ? PlayerBots::EBotState::Bus
+                : PlayerBots::EBotState::PreBus;
+        }
+
+        NewBot->BotState = InitialState;
+        NewBot->bHasRoofSpawned = bActuallySpawnedOnRoof;
+        if (bActuallySpawnedOnRoof) {
+            Log("[ROOF SPAWN] Bot marked for roof-based drop zone targeting!");
+        }
+
+        PlayerState->bInAircraft = (InitialState == PlayerBots::EBotState::Bus
+            || InitialState == PlayerBots::EBotState::PreBus);
+
         if (BotDisplayNames.size() != 0) {
             std::srand(static_cast<unsigned int>(std::time(0)));
             int randomIndex = std::rand() % BotDisplayNames.size();
@@ -308,18 +324,6 @@ namespace Bots {
             FString CVName = FString(wideString.c_str());
             GameMode->ChangeName(PC, CVName, true);
             PlayerState->OnRep_PlayerName();
-        }
-
-        if (StartingState != PlayerBots::EBotState::Warmup) {
-            for (PlayerBots::PlayerBot* Bot : PlayerBots::PlayerBotArray) {
-                if (Bot->Pawn == Pawn) {
-                    Bot->BotState = StartingState;
-                    Bot->bHasRoofSpawned = bActuallySpawnedOnRoof;
-                    if (bActuallySpawnedOnRoof) {
-                        Log("[ROOF SPAWN] Bot marked for roof-based drop zone targeting!");
-                    }
-                }
-            }
         }
 
         if (true)
