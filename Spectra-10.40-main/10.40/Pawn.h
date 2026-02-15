@@ -4,159 +4,191 @@
 
 namespace Pawn
 {
-	void ServerHandlePickup(AFortPlayerPawn* PlayerPawn, AFortPickup* Pickup, float InFlyTime, const struct FVector& InStartDirection, bool bPlayPickupSound)
-	{
-		if (!PlayerPawn || !Pickup) return;
-		if (Pickup->bPickedUp) return;
+    void ServerHandlePickup(AFortPlayerPawn* PlayerPawn, AFortPickup* Pickup, float InFlyTime, const struct FVector& InStartDirection, bool bPlayPickupSound)
+    {
+        if (!PlayerPawn || !Pickup) return;
+        if (Pickup->bPickedUp) return;
 
-		FFortPickupLocationData& PickupLocationData = Pickup->PickupLocationData;
-		FFortItemEntry& PickupItemEntry = Pickup->PrimaryPickupItemEntry;
+        AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)PlayerPawn->Controller;
+        if (!PC || !PC->WorldInventory) return;
 
-		PickupLocationData.PickupTarget = PlayerPawn;
-		PickupLocationData.ItemOwner = PlayerPawn;
-		PickupLocationData.FlyTime = 0.40f; //InFlyTime;
-		PickupLocationData.StartDirection = (FVector_NetQuantizeNormal)InStartDirection;
-		PickupLocationData.bPlayPickupSound = bPlayPickupSound;
-		Pickup->OnRep_PickupLocationData();
+        FFortItemEntry& PickupEntry = Pickup->PrimaryPickupItemEntry;
+        UFortItemDefinition* ItemDef = PickupEntry.ItemDefinition;
+        if (!ItemDef) return;
 
-		Pickup->bPickedUp = true;
-		Pickup->OnRep_bPickedUp();
+        if ((ItemDef->IsA(UFortWeaponRangedItemDefinition::StaticClass()) ||
+             ItemDef->IsA(UFortWeaponMeleeItemDefinition::StaticClass())) &&
+            !ItemDef->IsA(UFortBuildingItemDefinition::StaticClass()))
+        {
+            int32 EmptySlot = FortInventory::FindEmptyQuickBarSlot(PC, EFortQuickBars::Primary);
 
-		PlayerPawn->IncomingPickups.Add(Pickup);
-	}
+            if (EmptySlot < 0 && PlayerPawn->CurrentWeapon)
+            {
+                UFortItemDefinition* CurrentWeaponDef = PlayerPawn->CurrentWeapon->WeaponData;
+                if (CurrentWeaponDef && (CurrentWeaponDef->IsA(UFortWeaponRangedItemDefinition::StaticClass()) ||
+                                         CurrentWeaponDef->IsA(UFortWeaponMeleeItemDefinition::StaticClass())))
+                {
+                    FFortItemEntry* WeaponEntry = FortInventory::FindItemEntry(PC, CurrentWeaponDef);
+                    if (WeaponEntry)
+                    {
+                        FVector DropLoc = PlayerPawn->K2_GetActorLocation() + PlayerPawn->GetActorForwardVector() * 100.f;
+                        SpawnPickup(CurrentWeaponDef, WeaponEntry->Count, WeaponEntry->LoadedAmmo, DropLoc, EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, PlayerPawn);
+                        FortInventory::RemoveItem(PC, CurrentWeaponDef, WeaponEntry->Count);
+                    }
+                }
+            }
+        }
 
-	void (*NetMulticast_Athena_BatchedDamageCuesOG)(AFortPlayerPawn* PlayerPawn, const FAthenaBatchedDamageGameplayCues_Shared& SharedData, const FAthenaBatchedDamageGameplayCues_NonShared& NonSharedData);
-	void NetMulticast_Athena_BatchedDamageCues(AFortPlayerPawn* PlayerPawn, const FAthenaBatchedDamageGameplayCues_Shared& SharedData, const FAthenaBatchedDamageGameplayCues_NonShared& NonSharedData)
-	{
-		if (!PlayerPawn || !PlayerPawn->Controller) return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
+        FortInventory::GiveItem(PC, ItemDef, PickupEntry.Count, PickupEntry.LoadedAmmo);
 
-		AFortPlayerController* PC = (AFortPlayerController*)PlayerPawn->Controller;
-		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
-		if (!PlayerState || PlayerState->bIsABot) return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
+        FFortPickupLocationData& PickupLocationData = Pickup->PickupLocationData;
+        FFortItemEntry& PickupItemEntry = Pickup->PrimaryPickupItemEntry;
 
-		if (PlayerPawn->CurrentWeapon)
-		{
-			FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(PC, PlayerPawn->CurrentWeapon->ItemEntryGuid);
-			if (!ItemEntry) return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
-			ItemEntry->LoadedAmmo = PlayerPawn->CurrentWeapon->AmmoCount;
-			FortInventory::Update(PC, ItemEntry);
-		}
+        PickupLocationData.PickupTarget = PlayerPawn;
+        PickupLocationData.ItemOwner = PlayerPawn;
+        PickupLocationData.FlyTime = 0.40f; //InFlyTime;
+        PickupLocationData.StartDirection = (FVector_NetQuantizeNormal)InStartDirection;
+        PickupLocationData.bPlayPickupSound = bPlayPickupSound;
+        Pickup->OnRep_PickupLocationData();
 
-		return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
-	}
+        Pickup->bPickedUp = true;
+        Pickup->OnRep_bPickedUp();
 
-	void (*OnCapsuleBeginOverlapOG)(AFortPlayerPawn* Pawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	void OnCapsuleBeginOverlap(AFortPlayerPawn* Pawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-	{
-		//Log("OnCapsuleBeginOverlap Called!");
-		if (!Pawn || !OtherActor) return;
+        PlayerPawn->IncomingPickups.Add(Pickup);
+    }
 
-		if (OtherActor->IsA(AFortPickup::StaticClass()))
-		{
-			auto PC = (AFortPlayerControllerAthena*)Pawn->Controller;
-			if (!PC) return;
-			if (PC->PlayerState->bIsABot) return;
+    void (*NetMulticast_Athena_BatchedDamageCuesOG)(AFortPlayerPawn* PlayerPawn, const FAthenaBatchedDamageGameplayCues_Shared& SharedData, const FAthenaBatchedDamageGameplayCues_NonShared& NonSharedData);
+    void NetMulticast_Athena_BatchedDamageCues(AFortPlayerPawn* PlayerPawn, const FAthenaBatchedDamageGameplayCues_Shared& SharedData, const FAthenaBatchedDamageGameplayCues_NonShared& NonSharedData)
+    {
+        if (!PlayerPawn || !PlayerPawn->Controller) return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
 
-			AFortPickup* Pickup = (AFortPickup*)OtherActor;
+        AFortPlayerController* PC = (AFortPlayerController*)PlayerPawn->Controller;
+        AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+        if (!PlayerState || PlayerState->bIsABot) return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
 
-			if (Pickup->PawnWhoDroppedPickup == Pawn)
-				return;
+        if (PlayerPawn->CurrentWeapon)
+        {
+            FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(PC, PlayerPawn->CurrentWeapon->ItemEntryGuid);
+            if (!ItemEntry) return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
+            ItemEntry->LoadedAmmo = PlayerPawn->CurrentWeapon->AmmoCount;
+            FortInventory::Update(PC, ItemEntry);
+        }
 
-			UFortWorldItemDefinition* Def = (UFortWorldItemDefinition*)Pickup->PrimaryPickupItemEntry.ItemDefinition;
+        return NetMulticast_Athena_BatchedDamageCuesOG(PlayerPawn, SharedData, NonSharedData);
+    }
 
-			if (!Def) {
-				return;
-			}
+    void (*OnCapsuleBeginOverlapOG)(AFortPlayerPawn* Pawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+    void OnCapsuleBeginOverlap(AFortPlayerPawn* Pawn, UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+    {
+        //Log("OnCapsuleBeginOverlap Called!");
+        if (!Pawn || !OtherActor) return;
 
-			FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(PC, Def);
-			auto Count = ItemEntry ? ItemEntry->Count : 0;
+        if (OtherActor->IsA(AFortPickup::StaticClass()))
+        {
+            auto PC = (AFortPlayerControllerAthena*)Pawn->Controller;
+            if (!PC) return;
+            if (PC->PlayerState->bIsABot) return;
 
-			if (Def->IsStackable()) {
-				if (Def->IsA(UFortAmmoItemDefinition::StaticClass()) || Def->IsA(UFortResourceItemDefinition::StaticClass()) || Def->IsA(UFortTrapItemDefinition::StaticClass())) {
-					if (Count < Def->MaxStackSize) {
-						Pawn->ServerHandlePickup(Pickup, 0.40f, FVector(), true);
-					}
-				}
-				else if (ItemEntry) {
-					if (Count < Def->MaxStackSize) {
-						Pawn->ServerHandlePickup(Pickup, 0.40f, FVector(), true);
-					}
-				}
-			}
-		}
+            AFortPickup* Pickup = (AFortPickup*)OtherActor;
 
-		return;
-	}
+            if (Pickup->PawnWhoDroppedPickup == Pawn)
+                return;
 
-	void ServerMove(AFortPhysicsPawn* PhysicsPawn, const FReplicatedPhysicsPawnState& InState)
-	{
-		if (!PhysicsPawn) return;
+            UFortWorldItemDefinition* Def = (UFortWorldItemDefinition*)Pickup->PrimaryPickupItemEntry.ItemDefinition;
 
-		if (UPrimitiveComponent* RootComponent = Cast<UPrimitiveComponent>(PhysicsPawn->RootComponent))
-		{
-			FRotator RealRotation = Rotator(InState.Rotation);
+            if (!Def) {
+                return;
+            }
 
-			RealRotation.Yaw = FRotator::UnwindDegrees(RealRotation.Yaw);
+            FFortItemEntry* ItemEntry = FortInventory::FindItemEntry(PC, Def);
+            auto Count = ItemEntry ? ItemEntry->Count : 0;
 
-			RealRotation.Pitch = 0;
-			RealRotation.Roll = 0;
+            if (Def->IsStackable()) {
+                if (Def->IsA(UFortAmmoItemDefinition::StaticClass()) || Def->IsA(UFortResourceItemDefinition::StaticClass()) || Def->IsA(UFortTrapItemDefinition::StaticClass())) {
+                    if (Count < Def->MaxStackSize) {
+                        Pawn->ServerHandlePickup(Pickup, 0.40f, FVector(), true);
+                    }
+                }
+                else if (ItemEntry) {
+                    if (Count < Def->MaxStackSize) {
+                        Pawn->ServerHandlePickup(Pickup, 0.40f, FVector(), true);
+                    }
+                }
+            }
+        }
 
-			RootComponent->K2_SetWorldLocationAndRotation(InState.Translation, RealRotation, false, nullptr, true);
-			RootComponent->SetPhysicsLinearVelocity(InState.LinearVelocity, 0, FName(0));
-			RootComponent->SetPhysicsAngularVelocityInDegrees(InState.AngularVelocity, 0, FName(0));
-		}
-	}
+        return;
+    }
 
-	void (*ServerSendZiplineStateOG)(AFortPlayerPawn* PlayerPawn, const FZiplinePawnState& InZiplineState);
-	void ServerSendZiplineState(AFortPlayerPawn* PlayerPawn, const FZiplinePawnState& InZiplineState)
-	{
-		if (!PlayerPawn || !PlayerPawn->HasAuthority()) return ServerSendZiplineStateOG(PlayerPawn, InZiplineState);
+    void ServerMove(AFortPhysicsPawn* PhysicsPawn, const FReplicatedPhysicsPawnState& InState)
+    {
+        if (!PhysicsPawn) return;
 
-		PlayerPawn->ZiplineState = InZiplineState;
-		OnRep_ZiplineState(PlayerPawn);
+        if (UPrimitiveComponent* RootComponent = Cast<UPrimitiveComponent>(PhysicsPawn->RootComponent))
+        {
+            FRotator RealRotation = Rotator(InState.Rotation);
 
-		if (!InZiplineState.bIsZiplining)
-		{
-			if (InZiplineState.bJumped)
-			{
-				const float JumpZVelocity = 1500.0f;
-				const FVector LaunchVelocity = FVector{ 0.f,0.f,JumpZVelocity };
+            RealRotation.Yaw = FRotator::UnwindDegrees(RealRotation.Yaw);
 
-				if (PlayerPawn->CharacterMovement)
-				{
-					UCharacterMovementComponent* CharacterMovement = PlayerPawn->CharacterMovement;
+            RealRotation.Pitch = 0;
+            RealRotation.Roll = 0;
 
-					CharacterMovement->Velocity = FVector();
-					CharacterMovement->StopMovementImmediately();
-					PlayerPawn->LaunchCharacter(LaunchVelocity, true, true);
-				}
-			}
-		}
+            RootComponent->K2_SetWorldLocationAndRotation(InState.Translation, RealRotation, false, nullptr, true);
+            RootComponent->SetPhysicsLinearVelocity(InState.LinearVelocity, 0, FName(0));
+            RootComponent->SetPhysicsAngularVelocityInDegrees(InState.AngularVelocity, 0, FName(0));
+        }
+    }
 
-		return ServerSendZiplineStateOG(PlayerPawn, InZiplineState);
-	}
+    void (*ServerSendZiplineStateOG)(AFortPlayerPawn* PlayerPawn, const FZiplinePawnState& InZiplineState);
+    void ServerSendZiplineState(AFortPlayerPawn* PlayerPawn, const FZiplinePawnState& InZiplineState)
+    {
+        if (!PlayerPawn || !PlayerPawn->HasAuthority()) return ServerSendZiplineStateOG(PlayerPawn, InZiplineState);
 
-	void MovingEmoteStopped(AFortPawn* Pawn)
-	{
-		Log("MovingEmoteStopped Called!");
-		if (!Pawn)
-			return;
+        PlayerPawn->ZiplineState = InZiplineState;
+        OnRep_ZiplineState(PlayerPawn);
 
-		Pawn->bMovingEmote = false;
-	}
+        if (!InZiplineState.bIsZiplining)
+        {
+            if (InZiplineState.bJumped)
+            {
+                const float JumpZVelocity = 1500.0f;
+                const FVector LaunchVelocity = FVector{ 0.f,0.f,JumpZVelocity };
 
-	void HookAll()
-	{
-		HookVTable<APlayerPawn_Athena_C>(0x1C7, ServerHandlePickup);
+                if (PlayerPawn->CharacterMovement)
+                {
+                    UCharacterMovementComponent* CharacterMovement = PlayerPawn->CharacterMovement;
 
-		MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EF0A80), NetMulticast_Athena_BatchedDamageCues, reinterpret_cast<void**>(&NetMulticast_Athena_BatchedDamageCuesOG));
-		MH_CreateHook((LPVOID)(ImageBase + 0x196DB00), OnCapsuleBeginOverlap, (LPVOID*)&OnCapsuleBeginOverlapOG);
-		//MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
+                    CharacterMovement->Velocity = FVector();
+                    CharacterMovement->StopMovementImmediately();
+                    PlayerPawn->LaunchCharacter(LaunchVelocity, true, true);
+                }
+            }
+        }
 
-		HookVTable<APlayerPawn_Athena_C>(0x1D2, ServerSendZiplineState, reinterpret_cast<void**>(&ServerSendZiplineStateOG));
+        return ServerSendZiplineStateOG(PlayerPawn, InZiplineState);
+    }
 
-		//MH_CreateHook((LPVOID)(ImageBase + 0xB3EBA0), MovingEmoteStopped, nullptr);
+    void MovingEmoteStopped(AFortPawn* Pawn)
+    {
+        Log("MovingEmoteStopped Called!");
+        if (!Pawn)
+            return;
 
-		Log("Pawn Hooked!");
-	}
+        Pawn->bMovingEmote = false;
+    }
+
+    void HookAll()
+    {
+        HookVTable<APlayerPawn_Athena_C>(0x1C7, ServerHandlePickup);
+
+        MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EF0A80), NetMulticast_Athena_BatchedDamageCues, reinterpret_cast<void**>(&NetMulticast_Athena_BatchedDamageCuesOG));
+        MH_CreateHook((LPVOID)(ImageBase + 0x196DB00), OnCapsuleBeginOverlap, (LPVOID*)&OnCapsuleBeginOverlapOG);
+        //MH_CreateHook(reinterpret_cast<void*>(ImageBase + 0x1EFAC60), ServerMove, nullptr);
+
+        HookVTable<APlayerPawn_Athena_C>(0x1D2, ServerSendZiplineState, reinterpret_cast<void**>(&ServerSendZiplineStateOG));
+
+        //MH_CreateHook((LPVOID)(ImageBase + 0xB3EBA0), MovingEmoteStopped, nullptr);
+
+        Log("Pawn Hooked!");
+    }
 }

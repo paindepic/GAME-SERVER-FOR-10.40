@@ -9,7 +9,7 @@ namespace Globals {
 
     bool bBotsEnabled = false; // Set to false initially for crash testing - can be re-enabled after verifying stability
 
-    int MaxBotsToSpawn = 10;
+    int MaxBotsToSpawn = 70;
     int MinPlayersForEarlyStart = 95;
 
     //REAL PLAYERS
