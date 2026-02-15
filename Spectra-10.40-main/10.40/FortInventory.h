@@ -3,6 +3,44 @@
 
 namespace FortInventory
 {
+    static int32 FindEmptyQuickBarSlot(AFortPlayerController* PC, EFortQuickBars QuickBarType)
+    {
+        if (!PC || !PC->WorldInventory) return -1;
+
+        int32 MaxSlots = (QuickBarType == EFortQuickBars::Primary) ? 5 : 2;
+
+        for (int32 slot = 0; slot < MaxSlots; slot++)
+        {
+            bool bOccupied = false;
+
+            for (int32 i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
+            {
+                FFortItemEntry& Entry = PC->WorldInventory->Inventory.ReplicatedEntries[i];
+
+                if (Entry.Position == slot)
+                {
+                    UFortItemDefinition* Def = Entry.ItemDefinition;
+                    if (Def)
+                    {
+                        EFortQuickBars ItemQuickBar = GetQuickBars(Def);
+                        if (ItemQuickBar == QuickBarType)
+                        {
+                            bOccupied = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!bOccupied)
+            {
+                return slot;
+            }
+        }
+
+        return -1;
+    }
+
     static void Update(AFortPlayerController* PC, FFortItemEntry* ItemEntry = nullptr)
     {
         PC->HandleWorldInventoryLocalUpdate();
@@ -24,6 +62,8 @@ namespace FortInventory
 
     void GiveItem(AFortPlayerController* PC, UFortItemDefinition* Def, int Count = 1, int LoadedAmmo = 1, bool bShouldAddToExistingStack = false)
     {
+        if (!PC || !PC->WorldInventory || !Def) return;
+
         if (bShouldAddToExistingStack) {
             for (FFortItemEntry& ItemEntry : PC->WorldInventory->Inventory.ReplicatedEntries) {
                 if (Def == ItemEntry.ItemDefinition) {
@@ -38,8 +78,23 @@ namespace FortInventory
         }
 
         UFortWorldItem* Item = Cast<UFortWorldItem>(Def->CreateTemporaryItemInstanceBP(Count, 0));
+        if (!Item) return;
         Item->SetOwningControllerForTemporaryItem(PC);
         Item->ItemEntry.LoadedAmmo = LoadedAmmo;
+
+        if (Def->IsA(UFortWeaponRangedItemDefinition::StaticClass()) ||
+            Def->IsA(UFortWeaponMeleeItemDefinition::StaticClass()))
+        {
+            int32 EmptySlot = FindEmptyQuickBarSlot(PC, EFortQuickBars::Primary);
+            if (EmptySlot >= 0)
+            {
+                Item->ItemEntry.Position = EmptySlot;
+            }
+            else
+            {
+                Item->ItemEntry.Position = PC->WorldInventory->Inventory.ReplicatedEntries.Num();
+            }
+        }
 
         /*if (Item && Item->ItemEntry.ItemDefinition) {
             FFortItemEntryStateValue Value{};

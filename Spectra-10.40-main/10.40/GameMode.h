@@ -26,14 +26,13 @@ namespace GameMode
         {
             BotsToSpawn = NumBots;
             BotsSpawned = 0;
-            SpawnDelay = 3.0f;
-            InitialDelay = 10.0f;
+            SpawnDelay = 1.5f;
+            InitialDelay = 3.0f;
             LastSpawnTime = 0.f;
             bSpawnInProgress = true;
             bInitialized = true;
 
-            Log("[BOT SPAWNER] Will spawn " + std::to_string(NumBots) + " bots starting in "
-                + std::to_string(InitialDelay) + " seconds");
+            Log("[BOT SPAWNER] Starting spawn of " + std::to_string(NumBots) + " bots");
         }
 
         static void TickSpawn()
@@ -56,28 +55,35 @@ namespace GameMode
                 return;
             }
 
-            float Elapsed = CurrentTime - LastSpawnTime;
-            if (BotsSpawned == 0 && Elapsed < InitialDelay)
+            if (BotsSpawned == 0 && (CurrentTime - LastSpawnTime) < InitialDelay)
             {
                 return;
             }
 
-            if (Elapsed >= SpawnDelay)
+            if (CurrentTime - LastSpawnTime >= SpawnDelay)
             {
-                bool bSpawnOnRoof = (BotsSpawned % 3 == 0);
+                int32 BotsPerTick = (BotsSpawned < 20) ? 2 : 1;
 
-                Log("[BOT SPAWNER] Spawning bot " + std::to_string(BotsSpawned + 1) + "/"
-                    + std::to_string(BotsToSpawn));
+                for (int32 i = 0; i < BotsPerTick && BotsSpawned < BotsToSpawn; i++)
+                {
+                    bool bSpawnOnRoof = (BotsSpawned % 3 == 0);
 
-                Bots::SpawnPlayerBot(nullptr, PlayerBots::EBotState::Warmup, bSpawnOnRoof);
+                    if (BotsSpawned % 10 == 0)
+                    {
+                        Log("[BOT SPAWNER] Progress: " + std::to_string(BotsSpawned) + "/" + std::to_string(BotsToSpawn));
+                    }
 
-                BotsSpawned++;
+                    Bots::SpawnPlayerBot(nullptr, PlayerBots::EBotState::Warmup, bSpawnOnRoof);
+
+                    BotsSpawned++;
+                }
+
                 LastSpawnTime = CurrentTime;
 
                 if (BotsSpawned >= BotsToSpawn)
                 {
                     bSpawnInProgress = false;
-                    Log("[BOT SPAWNER] Spawn complete! Total: " + std::to_string(BotsSpawned));
+                    Log("[BOT SPAWNER] Complete! Total: " + std::to_string(BotsSpawned));
                 }
             }
         }
@@ -86,10 +92,10 @@ namespace GameMode
     int32 FBotSpawnManager::BotsToSpawn = 0;
     int32 FBotSpawnManager::BotsSpawned = 0;
     float FBotSpawnManager::LastSpawnTime = 0.f;
-    float FBotSpawnManager::SpawnDelay = 3.0f;
+    float FBotSpawnManager::SpawnDelay = 1.5f;
     bool FBotSpawnManager::bSpawnInProgress = false;
     bool FBotSpawnManager::bInitialized = false;
-    float FBotSpawnManager::InitialDelay = 10.0f;
+    float FBotSpawnManager::InitialDelay = 3.0f;
     bool (*ReadyToStartMatchOG)(AGameMode*);
     bool ReadyToStartMatch(AFortGameModeAthena* GameMode)
     {
@@ -413,22 +419,50 @@ namespace GameMode
 
             FVector AircraftLocation = Aircraft->K2_GetActorLocation();
 
+            if (PlayerBots::PlayerBotArray.empty()) {
+                Log("[BOT DROP] No bots in array!");
+                return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
+            }
+
+            int32 JumpedBots = 0;
+
             for (auto PlayerBot : PlayerBots::PlayerBotArray) {
-                if (!PlayerBot || !PlayerBot->Pawn) {
+                if (!PlayerBot) {
+                    Log("[CRASH FIX] PlayerBot is null!");
                     continue;
                 }
 
-                if (!PlayerBot->bHasJumpedFromBus) {
-                    AFortPlayerStateAthena* PS = (AFortPlayerStateAthena*)PlayerBot->Pawn->PlayerState;
-                    if (PS && PS->bInAircraft) {
-                        PlayerBot->Pawn->K2_TeleportTo(AircraftLocation, {});
-                        PlayerBot->Pawn->BeginSkydiving(true);
-                        PlayerBot->bHasJumpedFromBus = true;
-                        PlayerBot->BotState = PlayerBots::EBotState::Skydiving;
-                        Log("[BOT DROP] Bot jumped from bus!");
-                    }
+                if (!PlayerBot->Pawn) {
+                    Log("[CRASH FIX] PlayerBot->Pawn is null!");
+                    continue;
+                }
+
+                if (PlayerBot->bHasJumpedFromBus) {
+                    continue;
+                }
+
+                AFortPlayerStateAthena* BotPlayerState = (AFortPlayerStateAthena*)PlayerBot->Pawn->PlayerState;
+                if (!BotPlayerState) {
+                    Log("[CRASH FIX] BotPlayerState is null!");
+                    continue;
+                }
+
+                if (!BotPlayerState->bInAircraft) {
+                    continue;
+                }
+
+                PlayerBot->Pawn->K2_TeleportTo(AircraftLocation, FRotator(0, UKismetMathLibrary::RandomFloatInRange(0, 360), 0));
+                PlayerBot->Pawn->BeginSkydiving(true);
+                PlayerBot->bHasJumpedFromBus = true;
+                PlayerBot->BotState = PlayerBots::EBotState::Skydiving;
+                JumpedBots++;
+
+                if (JumpedBots % 10 == 0) {
+                    Log("[BOT DROP] " + std::to_string(JumpedBots) + " bots jumped from bus");
                 }
             }
+
+            Log("[BOT DROP] Total bots jumped: " + std::to_string(JumpedBots));
         }
 
         // When we do not actual event we should set it to timer
