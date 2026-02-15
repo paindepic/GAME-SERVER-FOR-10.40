@@ -3,39 +3,40 @@
 
 namespace FortInventory
 {
+    static EFortQuickBars GetQuickBars(UFortItemDefinition* ItemDefinition)
+    {
+        if (!ItemDefinition) return EFortQuickBars::Secondary;
+
+        if (!ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()) &&
+            !ItemDefinition->IsA(UFortEditToolItemDefinition::StaticClass()) &&
+            !ItemDefinition->IsA(UFortBuildingItemDefinition::StaticClass()) &&
+            !ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) &&
+            !ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) &&
+            !ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
+            return EFortQuickBars::Primary;
+        return EFortQuickBars::Secondary;
+    }
+
     static int32 FindEmptyQuickBarSlot(AFortPlayerController* PC, EFortQuickBars QuickBarType)
     {
         if (!PC || !PC->WorldInventory) return -1;
 
-        int32 MaxSlots = (QuickBarType == EFortQuickBars::Primary) ? 5 : 2;
-
-        for (int32 slot = 0; slot < MaxSlots; slot++)
+        // Count items in this quickbar type
+        int32 Count = 0;
+        for (int32 i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
         {
-            bool bOccupied = false;
-
-            for (int32 i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
+            FFortItemEntry& Entry = PC->WorldInventory->Inventory.ReplicatedEntries[i];
+            UFortItemDefinition* Def = Entry.ItemDefinition;
+            if (Def && GetQuickBars(Def) == QuickBarType)
             {
-                FFortItemEntry& Entry = PC->WorldInventory->Inventory.ReplicatedEntries[i];
-
-                if (Entry.Position == slot)
-                {
-                    UFortItemDefinition* Def = Entry.ItemDefinition;
-                    if (Def)
-                    {
-                        EFortQuickBars ItemQuickBar = GetQuickBars(Def);
-                        if (ItemQuickBar == QuickBarType)
-                        {
-                            bOccupied = true;
-                            break;
-                        }
-                    }
-                }
+                Count++;
             }
+        }
 
-            if (!bOccupied)
-            {
-                return slot;
-            }
+        int32 MaxSlots = (QuickBarType == EFortQuickBars::Primary) ? 5 : 2;
+        if (Count < MaxSlots)
+        {
+            return Count;
         }
 
         return -1;
@@ -82,19 +83,8 @@ namespace FortInventory
         Item->SetOwningControllerForTemporaryItem(PC);
         Item->ItemEntry.LoadedAmmo = LoadedAmmo;
 
-        if (Def->IsA(UFortWeaponRangedItemDefinition::StaticClass()) ||
-            Def->IsA(UFortWeaponMeleeItemDefinition::StaticClass()))
-        {
-            int32 EmptySlot = FindEmptyQuickBarSlot(PC, EFortQuickBars::Primary);
-            if (EmptySlot >= 0)
-            {
-                Item->ItemEntry.Position = EmptySlot;
-            }
-            else
-            {
-                Item->ItemEntry.Position = PC->WorldInventory->Inventory.ReplicatedEntries.Num();
-            }
-        }
+        // Position field does not exist in SDK 10.40
+        // Quickbar slot management is handled differently in this version
 
         /*if (Item && Item->ItemEntry.ItemDefinition) {
             FFortItemEntryStateValue Value{};
@@ -177,19 +167,6 @@ namespace FortInventory
                 break;
             }
         }
-    }
-
-    static EFortQuickBars GetQuickBars(UFortItemDefinition* ItemDefinition)
-    {
-        if (!ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()) &&
-            !ItemDefinition->IsA(UFortEditToolItemDefinition::StaticClass()) &&
-            !ItemDefinition->IsA(UFortBuildingItemDefinition::StaticClass()) &&
-            !ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) &&
-            !ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) &&
-            !ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
-            return EFortQuickBars::Primary;
-
-        return EFortQuickBars::Secondary;
     }
 
     static bool IsFullInventory(AFortPlayerController* PC)
