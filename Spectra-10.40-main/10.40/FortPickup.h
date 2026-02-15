@@ -34,7 +34,9 @@ namespace FortPickup {
                     break;
                 }
             }
-            return CompletePickupAnimationOG(Pickup);
+            // Don't call original function - bot inventory is already handled
+            // Calling CompletePickupAnimationOG would cause weapon duplication
+            return 0;
         }
 
         UFortItemDefinition* PickupItemDefinition = PickupEntry.ItemDefinition;

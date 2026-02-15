@@ -286,6 +286,15 @@ namespace Bots {
             return;
         }
 
+        // CRITICAL FIX: Create PlayerBot object to register in PlayerBotArray
+        // This fixes the bus crash (OnAircraftExitedDropZone) which expects bots in the array
+        PlayerBots::PlayerBot* NewBot = new PlayerBots::PlayerBot(Pawn, PC, PlayerState);
+        if (!NewBot) {
+            Log("[CRASH FIX] Failed to create PlayerBot object!");
+            return;
+        }
+        Log("[BOT SPAWN] PlayerBot created and added to array. Total bots: " + std::to_string(PlayerBots::PlayerBotArray.size()));
+
         if (BotDisplayNames.size() != 0) {
             std::srand(static_cast<unsigned int>(std::time(0)));
             int randomIndex = std::rand() % BotDisplayNames.size();
