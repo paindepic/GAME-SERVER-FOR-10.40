@@ -2185,7 +2185,14 @@ class BotsBTService_AIDropZone {
         bot->PC->K2_SetActorRotation(LookAtZone, true);
         
         // S'arrêter à la périphérie (70% du rayon)
-        FVector Dir = (TargetLoc - bot->LastUpdatedBotLocation).GetSafeNormal();
+        // Manual normalization since GetSafeNormal() doesn't exist in SDK 10.40
+        FVector Dir = TargetLoc - bot->LastUpdatedBotLocation;
+        float DirSize = sqrtf(Dir.X * Dir.X + Dir.Y * Dir.Y + Dir.Z * Dir.Z);
+        if (DirSize > 0.0f) {
+            Dir.X /= DirSize;
+            Dir.Y /= DirSize;
+            Dir.Z /= DirSize;
+        }
         FVector StopPos = TargetLoc - Dir * (TargetRadius * 0.7f);
         
         bot->PC->MoveToLocation(StopPos, 100.f, true, false, false, true, nullptr, true);
