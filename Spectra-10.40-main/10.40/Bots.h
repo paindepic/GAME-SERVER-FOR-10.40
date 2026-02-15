@@ -80,7 +80,11 @@ namespace Bots {
         return LargeFoundations;
     }
 
-    void SpawnPlayerBot(AActor* OverrideSpawnLoc = nullptr, PlayerBots::EBotState StartingState = PlayerBots::EBotState::Warmup, bool bSpawnOnRoof = false) {
+    void SpawnPlayerBot(AActor* OverrideSpawnLoc = nullptr, 
+                       PlayerBots::EBotState StartingState = PlayerBots::EBotState::Warmup,
+                       bool bSpawnOnRoof = false,
+                       int32 BotIndex = 0,
+                       int32 TotalBots = 1) {
         static UBehaviorTree* PhoebeBehaviorTree = StaticLoadObject<UBehaviorTree>("Game/Athena/AI/Phoebe/BehaviorTrees/BT_Phoebe.BT_Phoebe");
         static UClass* PhoebePawnClass = StaticLoadObject<UClass>("/Game/Athena/AI/Phoebe/BP_PlayerPawn_Athena_Phoebe.BP_PlayerPawn_Athena_Phoebe_C");
 
@@ -147,7 +151,71 @@ namespace Bots {
 
         // ENHANCED: Support roof spawning with city-specific targeting
         FVector SpawnLocation = BotSpawn->K2_GetActorLocation();
+        FRotator SpawnRotation = BotSpawn->K2_GetActorRotation();
         bool bActuallySpawnedOnRoof = false;
+        
+        // SYSTÈME DE SPAWN RÉPARTI SUR TOUTE LA MAP (Warmup phase)
+        if (StartingState == PlayerBots::EBotState::Warmup && TotalBots > 0) {
+            struct SpawnZone {
+                FVector Center;
+                float Radius;
+                int32 Weight;
+                const char* Name;
+            };
+            
+            static const SpawnZone Zones[] = {
+                // GRANDES VILLES (plus de poids)
+                {{-1500, -2500, 0}, 800.f, 25, "Tilted Towers"},
+                {{-500, -2500, 0}, 600.f, 20, "Pleasant Park"},
+                {{2000, -2500, 0}, 700.f, 20, "Retail Row"},
+                {{1500, 1500, 0}, 600.f, 15, "Paradise Palms"},
+                // MOYENNES ZONES
+                {{-2000, 1000, 0}, 500.f, 5, "Lazy Lagoon"},
+                {{1000, -1000, 0}, 500.f, 5, "Dusty Divot"},
+                {{-1000, 2000, 0}, 500.f, 5, "Fatal Fields"},
+                {{2500, 500, 0}, 500.f, 5, "Salty Springs"},
+                // PETITES ZONES
+                {{0, 0, 0}, 400.f, 2, "Loot Lake"},
+                {{-2500, -500, 0}, 400.f, 2, "Snobby Shores"},
+                {{3000, -1500, 0}, 400.f, 2, "Lonely Lodge"},
+                {{-1500, 2500, 0}, 400.f, 2, "Sunny Steps"},
+                {{0, 3000, 0}, 400.f, 2, "Lucky Landing"},
+                // ZONES RURALES
+                {{-3000, 2000, 0}, 1000.f, 1, "Rural West"},
+                {{3500, 2500, 0}, 1000.f, 1, "Rural East"},
+            };
+            
+            int32 TotalWeight = 0;
+            for (const auto& zone : Zones) TotalWeight += zone.Weight;
+            
+            // Répartition basée sur l'index du bot
+            int32 SelectedWeight = (BotIndex * 7) % TotalWeight;
+            int32 CurrentWeight = 0;
+            const SpawnZone* SelectedZone = nullptr;
+            
+            for (const auto& zone : Zones) {
+                CurrentWeight += zone.Weight;
+                if (SelectedWeight < CurrentWeight) {
+                    SelectedZone = &zone;
+                    break;
+                }
+            }
+            
+            if (SelectedZone) {
+                float Angle = UKismetMathLibrary::RandomFloatInRange(0.f, 6.28318f);
+                float Dist = UKismetMathLibrary::RandomFloatInRange(0.f, SelectedZone->Radius);
+                
+                SpawnLocation = SelectedZone->Center;
+                SpawnLocation.X += cos(Angle) * Dist;
+                SpawnLocation.Y += sin(Angle) * Dist;
+                SpawnLocation.Z = 20000.f;  // Hauteur pour skydiving
+                
+                SpawnRotation = FRotator(0, UKismetMathLibrary::RandomFloatInRange(0.f, 360.f), 0);
+                
+                Log("[BOT SPAWN] Bot " + std::to_string(BotIndex) + "/" + std::to_string(TotalBots) + 
+                    " spawning at " + SelectedZone->Name);
+            }
+        }
         
         if (bSpawnOnRoof && BuildingFoundations.Num() > 0) {
             // Get large buildings in major cities (Tilted, Pleasant, Retail, etc.)
@@ -202,7 +270,7 @@ namespace Bots {
             }
         }
 
-        AFortPlayerPawnAthena* Pawn = GameMode->ServerBotManager->SpawnBot(SpawnLocation, BotSpawn->K2_GetActorRotation(), BotCustomizationData);
+        AFortPlayerPawnAthena* Pawn = GameMode->ServerBotManager->SpawnBot(SpawnLocation, SpawnRotation, BotCustomizationData);
         if (!Pawn) {
             Log("[CRASH FIX] Failed to spawn bot pawn!");
             return;

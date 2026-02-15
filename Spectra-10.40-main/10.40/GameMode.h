@@ -73,7 +73,7 @@ namespace GameMode
                         Log("[BOT SPAWNER] Progress: " + std::to_string(BotsSpawned) + "/" + std::to_string(BotsToSpawn));
                     }
 
-                    Bots::SpawnPlayerBot(nullptr, PlayerBots::EBotState::Warmup, bSpawnOnRoof);
+                    Bots::SpawnPlayerBot(nullptr, PlayerBots::EBotState::Warmup, bSpawnOnRoof, BotsSpawned, BotsToSpawn);
 
                     BotsSpawned++;
                 }

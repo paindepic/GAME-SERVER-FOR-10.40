@@ -47,29 +47,20 @@ namespace PlayerBots {
     };
 
     enum class EBotWarmupChoice {
-        Emote,
-        ApproachPlayersAndEmote,
-        LookAtRandomPlayers,
-        PickaxeOtherPlayers,
-        FightOtherPlayers,
-        BuildStructures,
-        RunAround,
-        JumpAround,
-        PracticeBuilding,
-        SocialGroup,
-        ExploreSpawnIsland,
-        DanceInGroup,
-        FarmMaterials,
-        PracticeNineties,
-        PracticeEdits,
+        Emote,           // 40%
+        WalkAround,      // 35%
+        ShootWeapons,    // 25% - Tire sur joueurs
         MAX
     };
 
     enum class EBotPersonality {
-        Aggressive,
-        Builder,
-        Balanced,
-        Tactical,
+        Aggressive,      // 20% - Pushing constant
+        Builder,         // 15% - Focus construction
+        Balanced,        // 25% - Mix equilibre
+        Tactical,        // 15% - Flanking
+        Defender,        // 10% - Turtle/box defensive
+        Rusher,          // 10% - W-key rush
+        Camper,          // 5% - Ambush
         MAX
     };
 
@@ -226,6 +217,20 @@ namespace PlayerBots {
         int32 WoodCount = 999;
         int32 StoneCount = 500;
         int32 MetalCount = 200;
+        
+        // Personality-based behavior fields
+        float Aggressiveness = 0.5f;
+        float BuildingSpeed = 0.5f;
+        float Accuracy = 0.5f;
+        float ReactionTime = 0.15f;
+        float MoveSpeedMultiplier = 1.0f;
+        float StrafeIntensity = 0.5f;
+        float RetreatHealthThreshold = 50.0f;
+        float PreferredCombatDistance = 300.0f;
+        bool bLikesHighGround = true;
+        int32 MaxBuildsInFight = 15;
+        FVector WanderZoneCenter = FVector();
+        float WanderZoneRadius = 1000.0f;
         FVector LastWarmupMoveLocation = FVector();
         float LastWarmupActionTime = 0.f;
         EBotCombatStance CombatStance = EBotCombatStance::Passive;
@@ -525,6 +530,91 @@ namespace PlayerBots {
                     }
                 }
             }
+        }
+
+        void GenerateUniqueBehavior() {
+            // Vérification - s'assurer que les valeurs sont initialisées
+            int32 roll = UKismetMathLibrary::RandomIntegerInRange(0, 99);
+            
+            if (roll < 20) Personality = EBotPersonality::Aggressive;
+            else if (roll < 35) Personality = EBotPersonality::Builder;
+            else if (roll < 60) Personality = EBotPersonality::Balanced;
+            else if (roll < 75) Personality = EBotPersonality::Tactical;
+            else if (roll < 85) Personality = EBotPersonality::Defender;
+            else if (roll < 95) Personality = EBotPersonality::Rusher;
+            else Personality = EBotPersonality::Camper;
+            
+            SkillLevel = 3 + UKismetMathLibrary::RandomIntegerInRange(0, 6);  // 3-9
+            
+            // Stats basées sur personnalité avec vérifications
+            switch (Personality) {
+            case EBotPersonality::Aggressive:
+                Aggressiveness = 0.7f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.3f);
+                BuildingSpeed = 0.6f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.4f);
+                PreferredCombatDistance = 200.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 300.f);
+                bLikesHighGround = true;
+                MaxBuildsInFight = 15 + UKismetMathLibrary::RandomIntegerInRange(0, 20);
+                break;
+            case EBotPersonality::Defender:
+                Aggressiveness = 0.2f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.3f);
+                BuildingSpeed = 0.8f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.2f);
+                PreferredCombatDistance = 400.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 400.f);
+                bLikesHighGround = false;
+                MaxBuildsInFight = 30 + UKismetMathLibrary::RandomIntegerInRange(0, 20);
+                break;
+            case EBotPersonality::Rusher:
+                Aggressiveness = 0.8f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.2f);
+                BuildingSpeed = 0.7f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.3f);
+                PreferredCombatDistance = 100.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 200.f);
+                MaxBuildsInFight = 8 + UKismetMathLibrary::RandomIntegerInRange(0, 10);
+                break;
+            case EBotPersonality::Builder:
+                Aggressiveness = 0.4f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.2f);
+                BuildingSpeed = 0.9f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.1f);
+                PreferredCombatDistance = 350.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 250.f);
+                bLikesHighGround = true;
+                MaxBuildsInFight = 25 + UKismetMathLibrary::RandomIntegerInRange(0, 15);
+                break;
+            case EBotPersonality::Tactical:
+                Aggressiveness = 0.5f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.3f);
+                BuildingSpeed = 0.6f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.3f);
+                PreferredCombatDistance = 400.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 300.f);
+                bLikesHighGround = true;
+                MaxBuildsInFight = 20 + UKismetMathLibrary::RandomIntegerInRange(0, 15);
+                break;
+            case EBotPersonality::Camper:
+                Aggressiveness = 0.1f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.2f);
+                BuildingSpeed = 0.5f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.3f);
+                PreferredCombatDistance = 500.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 400.f);
+                bLikesHighGround = false;
+                MaxBuildsInFight = 10 + UKismetMathLibrary::RandomIntegerInRange(0, 10);
+                break;
+            default: // Balanced
+                Aggressiveness = 0.4f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.4f);
+                BuildingSpeed = 0.5f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.4f);
+                PreferredCombatDistance = 300.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 300.f);
+                bLikesHighGround = UKismetMathLibrary::RandomBool();
+                MaxBuildsInFight = 12 + UKismetMathLibrary::RandomIntegerInRange(0, 15);
+            }
+            
+            Accuracy = 0.4f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.5f);
+            ReactionTime = 0.1f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.2f);
+            MoveSpeedMultiplier = 0.8f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.4f);
+            StrafeIntensity = 0.5f + UKismetMathLibrary::RandomFloatInRange(0.f, 0.5f);
+            RetreatHealthThreshold = 30.0f + UKismetMathLibrary::RandomFloatInRange(0.f, 40.0f);
+        }
+
+        void GenerateWanderZone() {
+            if (!Pawn) return;
+            FVector BotLoc = Pawn->K2_GetActorLocation();
+            float Angle = UKismetMathLibrary::RandomFloatInRange(0.f, 6.28318f);
+            float Dist = UKismetMathLibrary::RandomFloatInRange(500.f, 2000.f);
+            WanderZoneCenter = FVector(
+                BotLoc.X + cos(Angle) * Dist,
+                BotLoc.Y + sin(Angle) * Dist,
+                BotLoc.Z
+            );
+            WanderZoneRadius = UKismetMathLibrary::RandomFloatInRange(500.f, 1500.f);
         }
     };
 
@@ -1497,371 +1587,124 @@ namespace PlayerBots {
         }
     };
 
-    class BotsBTService_Warmup {
+        class BotsBTService_Warmup {
     public:
-        void Tick(PlayerBot* bot) {
-            if (bot->WarmupChoice == EBotWarmupChoice::MAX) return;
+        void ChooseSocialLobbyBehavior(PlayerBot* bot) {
+            // Vérification NULL
+            if (!bot || !bot->Pawn) return;
+            
+            int32 choice = UKismetMathLibrary::RandomIntegerInRange(0, 99);
+            
+            if (choice < 40) bot->WarmupChoice = EBotWarmupChoice::Emote;
+            else if (choice < 75) bot->WarmupChoice = EBotWarmupChoice::WalkAround;
+            else bot->WarmupChoice = EBotWarmupChoice::ShootWeapons;
+            
+            bot->GenerateWanderZone();
+        }
 
-            if (bot->WarmupChoice == EBotWarmupChoice::Emote) {
-                if (bot->tick_counter % 300 == 0) bot->Emote();
+        void ExecuteSocialBehavior(PlayerBot* bot) {
+            // Vérification NULL
+            if (!bot || !bot->Pawn || !bot->PC) return;
+            
+            switch (bot->WarmupChoice) {
+            case EBotWarmupChoice::Emote: ExecuteEmoting(bot); break;
+            case EBotWarmupChoice::WalkAround: ExecuteWandering(bot); break;
+            case EBotWarmupChoice::ShootWeapons: ExecuteShootingAtPlayers(bot); break;
+            default: break;
             }
-            else if (bot->WarmupChoice == EBotWarmupChoice::ApproachPlayersAndEmote) {
-                if (bot->tick_counter % 200 == 0) {
-                    FVector BotPos = bot->Pawn->K2_GetActorLocation();
-                    if (bot->NearestPlayerPawn) {
-                        FVector Nearest = bot->NearestPlayerPawn->K2_GetActorLocation();
-                        if (!Nearest.IsZero()) {
-                            float Dist = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(BotPos, Nearest);
-                            if (Dist < 200.f + rand() % 300) {
-                                bot->LookAt(bot->NearestPlayerPawn);
-                                if (UKismetMathLibrary::GetDefaultObj()->RandomBool()) bot->Emote();
-                            } else {
-                                bot->LookAt(bot->NearestPlayerPawn);
-                                bot->PC->MoveToActor(bot->NearestPlayerPawn, 100, true, false, true, nullptr, true);
-                            }
-                        }
-                    }
-                }
+        }
+
+        void ExecuteEmoting(PlayerBot* bot) {
+            if (!bot || !bot->Pawn) return;
+            if (bot->tick_counter % 300 == 0) {
+                bot->Emote();
             }
-            else if (bot->WarmupChoice == EBotWarmupChoice::LookAtRandomPlayers) {
-                if (bot->tick_counter % 90 == 0) {
-                    APawn* RandomPawn = bot->GetRandomPawn();
-                    if (RandomPawn) bot->LookAt(RandomPawn);
-                }
-            }
-            else if (bot->WarmupChoice == EBotWarmupChoice::PickaxeOtherPlayers) {
-                if (bot->tick_counter % 200 == 0) {
-                    FVector BotPos = bot->Pawn->K2_GetActorLocation();
-                    if (!bot->CurrentlyFocusedPawn) bot->CurrentlyFocusedPawn = bot->GetRandomPawn();
-                    if (bot->CurrentlyFocusedPawn) {
-                        FVector Nearest = bot->CurrentlyFocusedPawn->K2_GetActorLocation();
-                        if (!Nearest.IsZero()) {
-                            float Dist = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(BotPos, Nearest);
-                            if (Dist < 180.f) {
-                                bot->LookAt(bot->CurrentlyFocusedPawn);
-                                if (UKismetMathLibrary::GetDefaultObj()->RandomBool()) bot->Pawn->PawnStartFire(0);
-                            } else {
-                                bot->Pawn->PawnStopFire(0);
-                                bot->LookAt(bot->CurrentlyFocusedPawn);
-                                bot->PC->MoveToActor(bot->CurrentlyFocusedPawn, 100, true, false, true, nullptr, true);
-                            }
-                        }
-                    }
-                }
-            }
-            else if (bot->WarmupChoice == EBotWarmupChoice::FightOtherPlayers) {
-                FVector BotPos = bot->Pawn->K2_GetActorLocation();
-                if (!bot->HasGun()) {
-                    bot->Pawn->PawnStopFire(0);
-                    if (bot->NearestPickup) {
-                        FVector Nearest = bot->NearestPickup->K2_GetActorLocation();
-                        if (!Nearest.IsZero()) {
-                            float Dist = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(BotPos, Nearest);
-                            if (Dist < 200.f) {
-                                bot->LookAt(bot->CurrentlyFocusedPawn);
-                                bot->Pickup(bot->NearestPickup);
-                            } else {
-                                bot->LookAt(bot->CurrentlyFocusedPawn);
-                                bot->PC->MoveToActor(bot->CurrentlyFocusedPawn, 100, true, false, true, nullptr, true);
-                            }
-                        }
-                    }
-                } else {
-                    if (bot->IsPickaxeEquiped()) bot->SimpleSwitchToWeapon();
-                    if (bot->NearestPlayerPawn) {
-                        FVector Nearest = bot->NearestPlayerPawn->K2_GetActorLocation();
-                        if (!((AFortPlayerStateAthena*)bot->NearestPlayerPawn->PlayerState)->bInAircraft || !Nearest.IsZero()) {
-                            if (bot->PC->LineOfSightTo(bot->NearestPlayerPawn, BotPos, true)) {
-                                bot->Pawn->PawnStartFire(0);
-                                bot->LookAt(bot->NearestPlayerPawn);
-                                bot->PC->MoveToActor(bot->NearestPlayerPawn, 300, true, false, true, nullptr, true);
-                                bot->ForceStrafe(true);
-                            }
-                        }
-                    }
-                }
-            }
-            else if (bot->WarmupChoice == EBotWarmupChoice::BuildStructures) {
-                if (bot->tick_counter % 100 == 0) {
-                    int RandomBuild = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 3);
-                    EBotBuildingType BuildType = (EBotBuildingType)RandomBuild;
-                    bot->EquipBuildingItem(BuildType);
-                    bot->Pawn->BuildingState = EFortBuildingState::Placement;
-                    bot->Pawn->PawnStartFire(0);
-                    Sleep(50);
-                    bot->Pawn->PawnStopFire(0);
-                }
-            }
-            else if (bot->WarmupChoice == EBotWarmupChoice::RunAround) {
-                if (bot->tick_counter % 150 == 0) {
-                    float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-2000.f, 2000.f);
-                    float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-2000.f, 2000.f);
-                    FVector BotLoc = bot->LastUpdatedBotLocation;
-                    FVector TargetLoc = FVector(BotLoc.X + RandomX, BotLoc.Y + RandomY, BotLoc.Z);
-                    bot->LastWarmupMoveLocation = TargetLoc;
-                    bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
-                }
-                if (bot->tick_counter % 30 == 0) bot->Run();
-            }
-            else if (bot->WarmupChoice == EBotWarmupChoice::JumpAround) {
-                if (bot->tick_counter % 150 == 0) {
-                    float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1500.f, 1500.f);
-                    float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1500.f, 1500.f);
-                    FVector BotLoc = bot->LastUpdatedBotLocation;
-                    FVector TargetLoc = FVector(BotLoc.X + RandomX, BotLoc.Y + RandomY, BotLoc.Z);
-                    bot->LastWarmupMoveLocation = TargetLoc;
-                    bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
-                }
-                if (bot->tick_counter % 45 == 0) bot->Pawn->Jump();
-            }
-            else if (bot->WarmupChoice == EBotWarmupChoice::PracticeBuilding) {
-                if (bot->tick_counter % 120 == 0) {
-                    int RandomBuild = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 3);
-                    EBotBuildingType BuildType = (EBotBuildingType)RandomBuild;
-                    bot->EquipBuildingItem(BuildType);
-                    bot->Pawn->BuildingState = EFortBuildingState::Placement;
-                    bot->Pawn->PawnStartFire(0);
-                    Sleep(50);
-                    bot->Pawn->PawnStopFire(0);
-                    if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.3f)) {
-                        bot->EquipPickaxe();
-                        bot->Pawn->PawnStartFire(0);
-                        Sleep(100);
-                        bot->Pawn->PawnStopFire(0);
-                    }
-                }
-                if (bot->tick_counter % 60 == 0) {
-                    float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-500.f, 500.f);
-                    float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-500.f, 500.f);
-                    FVector BotLoc = bot->LastUpdatedBotLocation;
-                    FVector TargetLoc = FVector(BotLoc.X + RandomX, BotLoc.Y + RandomY, BotLoc.Z);
-                    bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
-                }
-            }
-            // NEW: Social grouping behavior
-            else if (bot->WarmupChoice == EBotWarmupChoice::SocialGroup) {
-                if (bot->tick_counter % 180 == 0) {
-                    // Find a group of other bots/players
-                    FVector GroupCenter = FVector(0, 0, 0);
-                    int NearbyCount = 0;
-                    auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
-                    for (auto* OtherBot : GameMode->AliveBots) {
-                        if (OtherBot && OtherBot->Pawn && OtherBot->Pawn != bot->Pawn) {
-                            float Dist = OtherBot->Pawn->GetDistanceTo(bot->Pawn);
-                            if (Dist < 1000.f) {
-                                GroupCenter = GroupCenter + OtherBot->Pawn->K2_GetActorLocation();
-                                NearbyCount++;
-                            }
-                        }
-                    }
-                    if (NearbyCount > 0) {
-                        GroupCenter.X /= NearbyCount;
-                        GroupCenter.Y /= NearbyCount;
-                        GroupCenter.Z = bot->LastUpdatedBotLocation.Z;
-                        // Move towards group but keep some distance
-                        FVector Direction = bot->LastUpdatedBotLocation - GroupCenter;
-                        Direction.Normalize();
-                        FVector TargetPos = GroupCenter + Direction * 300.f;
-                        bot->PC->MoveToLocation(TargetPos, 100.0f, false, true, false, true, nullptr, true);
-                    } else {
-                        // No group found, explore
-                        float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1000.f, 1000.f);
-                        float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1000.f, 1000.f);
-                        FVector TargetLoc = bot->LastUpdatedBotLocation + FVector(RandomX, RandomY, 0);
-                        bot->PC->MoveToLocation(TargetLoc, 100.0f, false, true, false, true, nullptr, true);
-                    }
-                }
-                if (bot->tick_counter % 240 == 0 && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.3f)) {
-                    bot->Emote();
-                }
-            }
-            // NEW: Explore spawn island
-            else if (bot->WarmupChoice == EBotWarmupChoice::ExploreSpawnIsland) {
-                if (bot->tick_counter % 200 == 0) {
-                    // Pick a random direction and walk
-                    float RandomAngle = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(0.f, 360.f);
-                    float Distance = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(500.f, 2000.f);
-                    float Rad = RandomAngle * 3.14159f / 180.f;
-                    FVector Offset((float)cos(Rad) * Distance, (float)sin(Rad) * Distance, 0);
-                    FVector TargetLoc = bot->LastUpdatedBotLocation + Offset;
-                    bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
-                    // Occasionally look around
-                    if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.4f)) {
-                        APawn* RandomPawn = bot->GetRandomPawn();
-                        if (RandomPawn) bot->LookAt(RandomPawn);
-                    }
-                }
-                if (bot->tick_counter % 60 == 0) bot->Run();
-            }
-            // NEW: Dance in group
-            else if (bot->WarmupChoice == EBotWarmupChoice::DanceInGroup) {
-                // Check if near other players
-                bool bNearOthers = false;
-                auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
-                for (auto* OtherBot : GameMode->AliveBots) {
-                    if (OtherBot && OtherBot->Pawn && OtherBot->Pawn != bot->Pawn) {
-                        if (OtherBot->Pawn->GetDistanceTo(bot->Pawn) < 500.f) {
-                            bNearOthers = true;
-                            break;
-                        }
-                    }
-                }
-                if (bNearOthers && bot->tick_counter % 120 == 0) {
-                    bot->Emote();
-                } else if (!bNearOthers && bot->tick_counter % 180 == 0) {
-                    // Move towards others
-                    for (auto* OtherBot : GameMode->AliveBots) {
-                        if (OtherBot && OtherBot->Pawn && OtherBot->Pawn != bot->Pawn) {
-                            bot->PC->MoveToActor(OtherBot->Pawn, 300.f, true, false, true, nullptr, true);
-                            break;
-                        }
-                    }
-                }
-            }
-            // NEW: Farm materials in lobby
-            else if (bot->WarmupChoice == EBotWarmupChoice::FarmMaterials) {
-                if (bot->tick_counter % 100 == 0) {
-                    FVector BotLoc = bot->LastUpdatedBotLocation;
-                    
-                    // Initialize farming area on first tick
-                    if (bot->LobbyFarmingArea.IsZero()) {
-                        float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1500.f, 1500.f);
-                        float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-1500.f, 1500.f);
-                        bot->LobbyFarmingArea = BotLoc + FVector(RandomX, RandomY, 0);
-                        Log("[LOBBY FARM] Bot assigned farming area");
-                    }
-                    
-                    // Find farmable objects (simple simulation - in real game would trace for objects)
-                    if (!bot->CurrentFarmTarget || bot->CurrentFarmTarget->bHidden) {
-                        // Move to farming area
-                        float Dist = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(BotLoc, bot->LobbyFarmingArea);
-                        if (Dist > 200.f) {
-                            bot->PC->MoveToLocation(bot->LobbyFarmingArea, 50.0f, false, true, false, true, nullptr, true);
-                        } else {
-                            // Simulate farming
-                            bot->EquipPickaxe();
-                            bot->Pawn->PawnStartFire(0);
-                            
-                            // Simulate material gain
-                            if (bot->tick_counter % 20 == 0) {
-                                int32 MaterialType = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 2);
-                                int32 Amount = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(20, 40);
-                                
-                                if (MaterialType == 0 && bot->FarmedMaterials.Wood < 200) {
-                                    bot->FarmedMaterials.Wood += Amount;
-                                    bot->WoodCount += Amount;
-                                } else if (MaterialType == 1 && bot->FarmedMaterials.Stone < 150) {
-                                    bot->FarmedMaterials.Stone += Amount;
-                                    bot->StoneCount += Amount;
-                                } else if (MaterialType == 2 && bot->FarmedMaterials.Metal < 100) {
-                                    bot->FarmedMaterials.Metal += Amount;
-                                    bot->MetalCount += Amount;
-                                }
-                                bot->FarmedMaterials.ObjectsFarmed++;
-                                
-                                Log(std::string("[LOBBY FARM] Bot farmed materials: W=") + std::to_string(bot->FarmedMaterials.Wood) + ", S=" + std::to_string(bot->FarmedMaterials.Stone) + ", M=" + std::to_string(bot->FarmedMaterials.Metal));
-                            }
-                        }
-                    }
+        }
+
+        void ExecuteWandering(PlayerBot* bot) {
+            if (!bot || !bot->Pawn || !bot->PC) return;
+            
+            if (bot->tick_counter % 150 == 0) {
+                // Generate new wander target if needed
+                if (bot->WanderZoneCenter.IsZero() || UKismetMathLibrary::RandomBoolWithWeight(0.3f)) {
+                    bot->GenerateWanderZone();
                 }
                 
-                // Stop farming after a while
-                if (bot->tick_counter % 30 == 0) {
-                    bot->Pawn->PawnStopFire(0);
-                }
+                // Move to random point in wander zone
+                float Angle = UKismetMathLibrary::RandomFloatInRange(0.f, 6.28318f);
+                float Dist = UKismetMathLibrary::RandomFloatInRange(0.f, bot->WanderZoneRadius);
+                FVector TargetLoc = FVector(
+                    bot->WanderZoneCenter.X + cos(Angle) * Dist,
+                    bot->WanderZoneCenter.Y + sin(Angle) * Dist,
+                    bot->Pawn->K2_GetActorLocation().Z
+                );
+                bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
             }
-            // NEW: Practice 90s in lobby
-            else if (bot->WarmupChoice == EBotWarmupChoice::PracticeNineties) {
-                if (bot->tick_counter % 150 == 0) {
-                    FVector BotLoc = bot->LastUpdatedBotLocation;
-                    FVector Forward = bot->Pawn->GetActorForwardVector();
-                    FVector Right = bot->Pawn->GetActorRightVector();
-                    
-                    // Build 90s pattern: wall -> ramp -> turn -> wall -> ramp
-                    int32 Step = bot->NinetiesBuildsCompleted % 4;
-                    
-                    if (Step == 0) {
-                        // Place wall
-                        bot->EquipBuildingItem(EBotBuildingType::Wall);
-                        bot->Pawn->BuildingState = EFortBuildingState::Placement;
-                        bot->Pawn->PawnStartFire(0);
-                        Sleep(50);
-                        bot->Pawn->PawnStopFire(0);
-                        Log("[LOBBY 90s] Placed wall");
-                    } else if (Step == 1) {
-                        // Place ramp
-                        bot->EquipBuildingItem(EBotBuildingType::Stair);
-                        bot->Pawn->BuildingState = EFortBuildingState::Placement;
-                        bot->Pawn->PawnStartFire(0);
-                        Sleep(50);
-                        bot->Pawn->PawnStopFire(0);
-                        bot->Pawn->Jump();
-                        Log("[LOBBY 90s] Placed ramp and jumped");
-                    } else if (Step == 2) {
-                        // Turn 90 degrees
-                        FRotator CurrentRot = bot->PC->GetControlRotation();
-                        CurrentRot.Yaw += 90.f;
-                        bot->PC->SetControlRotation(CurrentRot);
-                        Log("[LOBBY 90s] Turned 90 degrees");
-                    } else {
-                        // Place floor for base
-                        bot->EquipBuildingItem(EBotBuildingType::Floor);
-                        bot->Pawn->BuildingState = EFortBuildingState::Placement;
-                        bot->Pawn->PawnStartFire(0);
-                        Sleep(50);
-                        bot->Pawn->PawnStopFire(0);
-                        Log("[LOBBY 90s] Placed floor");
-                    }
-                    
-                    bot->NinetiesBuildsCompleted++;
-                    
-                    if (bot->NinetiesBuildsCompleted % 8 == 0) {
-                        {std::stringstream ss; ss << "[LOBBY 90s] Bot completed " << (bot->NinetiesBuildsCompleted / 4) << " 90s cycles"; Log(ss.str());}
-                    }
-                }
-            }
-            // NEW: Practice edits in lobby
-            else if (bot->WarmupChoice == EBotWarmupChoice::PracticeEdits) {
-                if (bot->tick_counter % 180 == 0) {
-                    int32 BuildType = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 3);
-                    EBotBuildingType Type = (EBotBuildingType)BuildType;
-                    
-                    // Place build
-                    bot->EquipBuildingItem(Type);
-                    bot->Pawn->BuildingState = EFortBuildingState::Placement;
-                    bot->Pawn->PawnStartFire(0);
-                    Sleep(50);
-                    bot->Pawn->PawnStopFire(0);
-                    
-                    // Wait a moment then edit
-                    Sleep(100);
-                    
-                    // Enter edit mode (simplified - real game would need to trace to building piece)
-                    bot->EquipBuildingItem(EBotBuildingType::Edit);
-                    bot->Pawn->BuildingState = EFortBuildingState::EditMode;
-                    Sleep(50);
-                    
-                    // Confirm edit
-                    bot->Pawn->PawnStartFire(0);
-                    Sleep(50);
-                    bot->Pawn->PawnStopFire(0);
-                    
-                    bot->EditsCompleted++;
-                    {std::stringstream ss; ss << "[LOBBY EDIT] Bot completed " << bot->EditsCompleted << " edits"; Log(ss.str());}
-                }
+            if (bot->tick_counter % 30 == 0) bot->Run();
+        }
+
+        void ExecuteShootingAtPlayers(PlayerBot* bot) {
+            // Vérifications NULL
+            if (!bot || !bot->Pawn || !bot->PC) return;
+            
+            APawn* target = bot->GetNearestPawn();
+            
+            if (target && bot->Pawn->GetDistanceTo(target) < 1500.f) {
+                bot->LookAt(target);
                 
-                // Move around between edits
-                if (bot->tick_counter % 90 == 0) {
-                    float RandomX = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
-                    float RandomY = UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-300.f, 300.f);
-                    FVector TargetLoc = bot->LastUpdatedBotLocation + FVector(RandomX, RandomY, 0);
-                    bot->PC->MoveToLocation(TargetLoc, 50.0f, false, true, false, true, nullptr, true);
+                if (!bot->HasGun()) bot->SimpleSwitchToWeapon();
+                
+                if (bot->HasGun() && bot->tick_counter % 60 == 0) {
+                    // Vérifier que le Pawn est valide avant de tirer
+                    if (!bot->Pawn->IsDead()) {
+                        FVector targetLoc = target->K2_GetActorLocation();
+                        targetLoc.X += UKismetMathLibrary::RandomFloatInRange(-200, 200);
+                        targetLoc.Y += UKismetMathLibrary::RandomFloatInRange(-200, 200);
+                        targetLoc.Z += UKismetMathLibrary::RandomFloatInRange(-50, 100);
+                        
+                        FRotator aimRot = UKismetMathLibrary::GetDefaultObj()->FindLookAtRotation(
+                            bot->Pawn->K2_GetActorLocation(), targetLoc);
+                        
+                        if (bot->PC) {
+                            bot->PC->SetControlRotation(aimRot);
+                            bot->PC->K2_SetActorRotation(aimRot, true);
+                        }
+                        
+                        bot->Pawn->PawnStartFire(0);
+                        Sleep(150);
+                        bot->Pawn->PawnStopFire(0);
+                    }
+                }
+            }
+            else {
+                APawn* randomTarget = bot->GetRandomPawn();
+                if (randomTarget) {
+                    bot->PC->MoveToActor(randomTarget, 500.f, true, false, true, nullptr, true);
+                    bot->Run();
+                }
+                else {
+                    ExecuteWandering(bot);
                 }
             }
         }
+
+        void Tick(PlayerBot* bot) {
+            // Vérifications NULL
+            if (!bot || !bot->Pawn || !bot->PC) {
+                Log("[CRASH FIX] Null bot in Warmup::Tick!");
+                return;
+            }
+            
+            if (bot->WarmupChoice == EBotWarmupChoice::MAX) {
+                ChooseSocialLobbyBehavior(bot);
+                return;
+            }
+            
+            ExecuteSocialBehavior(bot);
+        }
     };
 
-    class BotsBTService_AIDropZone {
+class BotsBTService_AIDropZone {
     public:
         void ChooseDropZone(PlayerBot* bot) {
             if (!bot) return;
@@ -2313,11 +2156,46 @@ namespace PlayerBots {
         }
     };
 
+    void ExecuteSafeZoneMovement(PlayerBot* bot) {
+        // Vérifications NULL
+        if (!bot || !bot->Pawn || !bot->PC) return;
+        
+        bot->Pawn->PawnStopFire(0);
+        
+        AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+        if (!GameState || !GameState->SafeZoneIndicator) return;
+        
+        FVector TargetLoc = GameState->SafeZoneIndicator->NextCenter;
+        float TargetRadius = GameState->SafeZoneIndicator->NextRadius;
+        
+        if (TargetLoc.IsZero()) return;
+        
+        float DistToZone = UKismetMathLibrary::GetDefaultObj()->Vector_Distance(
+            bot->LastUpdatedBotLocation, TargetLoc);
+        
+        // Sprinter si loin
+        if (DistToZone > 2000.f) {
+            bot->Run();
+        }
+        
+        // Orientation vers la zone
+        FRotator LookAtZone = UKismetMathLibrary::GetDefaultObj()->FindLookAtRotation(
+            bot->Pawn->K2_GetActorLocation(), TargetLoc);
+        bot->PC->SetControlRotation(LookAtZone);
+        bot->PC->K2_SetActorRotation(LookAtZone, true);
+        
+        // S'arrêter à la périphérie (70% du rayon)
+        FVector Dir = (TargetLoc - bot->LastUpdatedBotLocation).GetSafeNormal();
+        FVector StopPos = TargetLoc - Dir * (TargetRadius * 0.7f);
+        
+        bot->PC->MoveToLocation(StopPos, 100.f, true, false, false, true, nullptr, true);
+    }
+
     void TickBots() {
         auto GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
         auto GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
         
-        // Null checks for critical game objects
+        // Vérifications NULL CRITIQUES
         if (!GameMode) {
             Log("[CRASH FIX] GameMode is null in TickBots!");
             return;
@@ -2328,11 +2206,17 @@ namespace PlayerBots {
         }
 
         for (PlayerBot* Bot : PlayerBotArray) {
-            if (!Bot || !Bot->PC || !Bot->Pawn || !Bot->PlayerState) {
-                if (Bot) {
-                    Log("[CRASH FIX] Bot has null components - skipping tick!");
-                }
+            // Vérifications POUR CHAQUE BOT
+            if (!Bot) {
+                Log("[CRASH FIX] Bot is null in TickBots loop!");
                 continue;
+            }
+            if (!Bot->PC || !Bot->Pawn || !Bot->PlayerState) {
+                Log("[CRASH FIX] Bot has null components!");
+                continue;
+            }
+            if (Bot->Pawn->IsDead()) {
+                continue;  // Bot mort, ne pas traiter
             }
 
             if (Bot->PlayerState->IsPlayerDead() || Bot->Pawn->IsDead()) {
@@ -2381,14 +2265,10 @@ namespace PlayerBots {
             
             BotsBTService_SoundDetection SoundDetection;
 
-            // Initialize bot personality and skill on first tick
+            // INITIALISATION COMPORTEMENT UNIQUE
             if (Bot->tick_counter == 0) {
-                int PersonalityRoll = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, 99);
-                if (PersonalityRoll < 35) Bot->Personality = EBotPersonality::Balanced;
-                else if (PersonalityRoll < 65) Bot->Personality = EBotPersonality::Aggressive;
-                else if (PersonalityRoll < 85) Bot->Personality = EBotPersonality::Builder;
-                else Bot->Personality = EBotPersonality::Tactical;
-                Bot->SkillLevel = UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(3, 9);
+                Bot->GenerateUniqueBehavior();
+                Log("[BOT INIT] Bot personality: " + std::to_string((int)Bot->Personality));
                 Bot->BuildCooldown = 0.15f - (Bot->SkillLevel * 0.012f);
                 Bot->WoodCount = 999;
                 Bot->StoneCount = 500;
