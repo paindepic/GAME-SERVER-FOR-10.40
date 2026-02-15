@@ -104,8 +104,7 @@ namespace ServerBotManager {
 
         PlayerBots::PlayerBot* Bot = new PlayerBots::PlayerBot(Pawn, PC, PlayerState);
 
-        // Tick bot spawn manager to continue spawning bots progressively
-        if (BotSpawnProgressCallback) BotSpawnProgressCallback();
+        Log("[BOT SPAWN] Bot created successfully");
 
         if (PC->Inventory) {
             for (auto item : BotData->StartupInventory->Items)
