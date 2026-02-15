@@ -7,7 +7,7 @@ namespace Globals {
     bool bSTWEnabled = false;
     bool bEventEnabled = false;
 
-    bool bBotsEnabled = false; // Set to false initially for crash testing - can be re-enabled after verifying stability
+    bool bBotsEnabled = true; // Bots re-enabled for gameplay testing
 
     int MaxBotsToSpawn = 70;
     int MinPlayersForEarlyStart = 95;
